@@ -50,7 +50,11 @@ class HTMLToWordParser(HTMLParser):
         current_style: dict[str, bool] = {}
         for style in reversed(self.current_styles):
             current_style.update(style)
-        assert self.current_paragraph is not None
+        if self.current_paragraph is None:
+            if isinstance(self.container, BlockItemContainer):
+                self.current_paragraph = self.container.paragraphs[0]
+            else:
+                self.current_paragraph = self.container.add_paragraph()
         run = self.current_paragraph.add_run(data)
         run.font.bold = current_style.get("bold", False)
         run.font.italic = current_style.get("italic", False)

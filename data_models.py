@@ -1,6 +1,7 @@
 from dataclasses import dataclass, field
 from dataclasses_json import dataclass_json
-from typing import  Any
+from typing import Any, Literal
+
 
 @dataclass_json
 @dataclass
@@ -9,6 +10,7 @@ class Addition:
     icon: str
     front: str
     back: str
+
 
 @dataclass_json
 @dataclass
@@ -21,11 +23,17 @@ class Chunk:
 
     def get_merged_front(self) -> str:
         SPACES = "&nbsp;" * 2
-        return self.front + "".join(f"<p>{SPACES}{a.icon} {self.dissolve_p_tags(a.front)}</p>" for a in self.additions)
+        return self.front + "".join(
+            f"<p>{SPACES}{a.icon} {self.dissolve_p_tags(a.front)}</p>"
+            for a in self.additions
+        )
 
     def get_merged_back(self) -> str:
         SPACES = "&nbsp;" * 2
-        return self.back + "".join(f"<p>{SPACES}{a.icon} {self.dissolve_p_tags(a.back)}</p>" for a in self.additions)
+        return self.back + "".join(
+            f"<p>{SPACES}{a.icon} {self.dissolve_p_tags(a.back)}</p>"
+            for a in self.additions
+        )
 
     @classmethod
     def dissolve_p_tags(cls, text: str) -> str:
@@ -34,12 +42,15 @@ class Chunk:
     @classmethod
     def from_dict(cls, d: Any) -> "Chunk": ...
 
+
 @dataclass_json
 @dataclass
 class ChunkDocument:
     version: int
     records: list[Chunk]
     title: str
+    footer: str = field(default="")
+    deckType: Literal["one-side", "two-side", "type"] = field(default="one-side")
 
     @classmethod
     def from_dict(cls, d: Any) -> "ChunkDocument": ...
