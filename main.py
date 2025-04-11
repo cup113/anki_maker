@@ -1,18 +1,28 @@
+import tkinter as tk
+from tkinter import filedialog
 from data_models import Chunk, ChunkDocument
 from document_utils import create_document, generate_tables, generate_footer
 from genanki import Model, Note, Deck, Package  # type: ignore
 from typing import Literal
+from pathlib import Path
+from os import startfile
+from typing import Callable
+from argparse import ArgumentParser
 import json
 
 
-def load_document(file_path: str) -> ChunkDocument:
+def load_document(file_path: Path) -> ChunkDocument:
     with open(file_path, "r", encoding="utf-8") as f:
         raw = f.read()
         data = json.loads(raw)
         return ChunkDocument.from_dict(data)
 
 
-def gen_anki(chunks: list[Chunk], deck_type: Literal["one-side", "two-side", "type"]):
+def gen_anki(
+    chunks: list[Chunk],
+    deck_type: Literal["one-side", "two-sides", "type"],
+    file_path: Path,
+):
     CSS = """
 .card {
     font-family: "微软雅黑", arial;
@@ -86,7 +96,7 @@ def gen_anki(chunks: list[Chunk], deck_type: Literal["one-side", "two-side", "ty
 
     MODEL_DICT = {
         "one-side": ANKI_MODEL_ONE_SIDE,
-        "two-side": ANKI_MODEL_TWO_SIDE,
+        "two-sides": ANKI_MODEL_TWO_SIDE,
         "type": ANKI_MODEL_TYPE,
     }
 
@@ -101,21 +111,93 @@ def gen_anki(chunks: list[Chunk], deck_type: Literal["one-side", "two-side", "ty
     deck_id = 2973800905
     deck = Deck(deck_id, "Generated")
     for note in notes:
-        deck.add_note(note)
+        deck.add_note(note)  # type: ignore
 
     pkg = Package(deck)
-    pkg.write_to_file("anki_maker/Chunks.apkg")
+    pkg.write_to_file(file_path)  # type: ignore
 
 
-def main():
-    document = load_document("anki_maker/AL_document.json")
+def gen(file_path: Path):
+    document = load_document(file_path)
     doc = create_document(document)
     generate_tables(doc, document.records)
     generate_footer(doc, document.footer)
-    doc.save("anki_maker/Chunks.docx")
-    gen_anki(document.records, document.deckType)
+    doc.save(str(file_path.parent / f"{file_path.stem}_output.docx"))
+    gen_anki(
+        document.records,
+        document.deckType,
+        file_path.parent / f"{file_path.stem}_output.apkg",
+    )
+
+
+def select_file(on_success: Callable[[Path], None], on_fail: Callable[[], None]):
+    file_path = filedialog.askopenfilename(filetypes=[("JSON Files", "*.json")])
+    if file_path:
+        gen(Path(file_path))
+        on_success(Path(file_path))
+    else:
+        on_fail()
+
+
+def get_folder_opener(folder_path: Path):
+    def open_folder():
+        startfile(folder_path)
+
+    return open_folder
+
+
+def main():
+    parser = ArgumentParser(description="Anki Maker")
+    parser.add_argument("file", nargs="?", help="File to open")
+    parser.add_argument(
+        "--open-folder", action="store_true", help="Open the folder after generating"
+    )
+    args = parser.parse_args()
+
+    if args.file:
+        file_path = Path(args.file)
+        if file_path.exists():
+            gen(Path(args.file))
+            if args.open_folder:
+                file_opener = get_folder_opener(file_path.parent)
+                file_opener()
+        else:
+            print(f"File not found: {args.file}")
+    else:
+        root = tk.Tk()
+        root.title("Anki Maker")
+        root.geometry("240x240")
+
+        button = tk.Button(
+            root,
+            text="选择文件",
+            command=lambda: select_file(on_select_file_success, on_select_file_fail),
+        )
+        button.pack(pady=20)
+
+        success_label = tk.Label(root, text="", fg="black", font=("Arial", 12))
+        success_label.pack(pady=10)
+
+        open_folder_button = tk.Button(root, text="打开文件夹")
+        open_folder_button.pack_forget()
+
+        def on_select_file_success(file_path: Path):
+            success_label.config(
+                text=f"{file_path.parent.stem}\n{file_path.stem}\nDone",
+                fg="green",
+                font=("Arial", 14, "bold"),
+            )
+            open_folder_button.config(command=get_folder_opener(Path(file_path).parent))
+            open_folder_button.pack(pady=10)
+
+        def on_select_file_fail():
+            success_label.config(  # type: ignore
+                text="File not chosen", fg="orange", font=("Arial", 12, "bold")
+            )
+            open_folder_button.pack_forget()
+
+        root.mainloop()
 
 
 if __name__ == "__main__":
     main()
-    print("文档生成成功！")

@@ -50,7 +50,7 @@ class ChunkDocument:
     records: list[Chunk]
     title: str
     footer: str = field(default="")
-    deckType: Literal["one-side", "two-side", "type"] = field(default="one-side")
+    deckType: Literal["one-side", "two-sides", "type"] = field(default="one-side")
 
     @classmethod
     def from_dict(cls, d: Any) -> "ChunkDocument": ...
