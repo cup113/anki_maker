@@ -2,3 +2,4 @@ __pycache__
 *.apkg
 *.docx
 AL_*.json
+.vscode
