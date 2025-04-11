@@ -1,3 +1,5 @@
+from datetime import datetime
+
 from docx import Document
 from docx.document import Document as DocumentClass
 from docx.table import Table
@@ -8,9 +10,9 @@ from docx.enum.table import WD_ALIGN_VERTICAL
 from docx.oxml.ns import qn
 from docx.oxml import OxmlElement
 from docx.oxml.xmlchemy import BaseOxmlElement
+
 from data_models import Chunk, ChunkDocument
 from html_parser import HTMLToWordParser
-from datetime import datetime
 
 
 def create_document(chunk_document: ChunkDocument) -> DocumentClass:

@@ -1,20 +1,21 @@
 import tkinter as tk
 from tkinter import filedialog
+from os import startfile
+from json import loads as json_loads
+from typing import Literal, Callable
+from pathlib import Path
+from argparse import ArgumentParser
+
+from genanki import Model, Note, Deck, Package  # type: ignore
+
 from data_models import Chunk, ChunkDocument
 from document_utils import create_document, generate_tables, generate_footer
-from genanki import Model, Note, Deck, Package  # type: ignore
-from typing import Literal
-from pathlib import Path
-from os import startfile
-from typing import Callable
-from argparse import ArgumentParser
-import json
 
 
 def load_document(file_path: Path) -> ChunkDocument:
     with open(file_path, "r", encoding="utf-8") as f:
         raw = f.read()
-        data = json.loads(raw)
+        data = json_loads(raw)
         return ChunkDocument.from_dict(data)
 
 
@@ -38,8 +39,13 @@ def gen_anki(
 }
 """
 
+    MODEL_ID_ONE_SIDE = 1739425482
+    MODEL_ID_TWO_SIDES = 1739425489
+    MODEL_ID_TYPE = 1739425493
+    assert len({MODEL_ID_ONE_SIDE, MODEL_ID_TWO_SIDES, MODEL_ID_TYPE}) == 3
+
     ANKI_MODEL_ONE_SIDE = Model(
-        1739425482,
+        MODEL_ID_ONE_SIDE,
         "LanguageLearning",
         fields=[
             {"name": "Front"},
@@ -56,7 +62,7 @@ def gen_anki(
     )
 
     ANKI_MODEL_TWO_SIDE = Model(
-        1739425489,
+        MODEL_ID_TWO_SIDES,
         "LanguageLearningType",
         fields=[
             {"name": "Front"},
@@ -78,7 +84,7 @@ def gen_anki(
     )
 
     ANKI_MODEL_TYPE = Model(
-        1739425493,
+        MODEL_ID_TYPE,
         "LanguageLearningType",
         fields=[
             {"name": "Front"},
