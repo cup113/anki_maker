@@ -1,3 +1,13 @@
+FROM node:22 AS frontend-builder
+WORKDIR /app
+COPY client/package.json client/pnpm-lock.yaml* ./client/
+RUN npm install -g pnpm && \
+    cd client && \
+    pnpm install --frozen-lockfile
+COPY client ./client
+RUN cd client && \
+    pnpm run build
+
 FROM python:3.11-slim AS backend
 WORKDIR /app
 
