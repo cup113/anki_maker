@@ -12,12 +12,28 @@ from genanki import Model, Note, Deck, Package  # type: ignore
 from server.data_models import Chunk, ChunkDocument
 from server.document_utils import create_document, generate_tables, generate_footer
 
-app = FastAPI(title="Anki Maker API")
+app = FastAPI(
+    title="Anki Maker API",
+    description="一个将文本内容转换为Anki卡片和Word文档的API服务",
+    version="1.0.0",
+    contact={
+        "name": "API Support",
+        "url": "https://github.com/cup113/anki_maker",
+        "email": "support@ankimaker.com",
+    },
+    license_info={
+        "name": "Apache 2.0 License",
+    },
+)
 PRODUCTION = getenv("APP_ENV") == "production"
 
 
 class DocumentResponse(BaseModel):
-    message: str
+    """
+    生成文档的响应模型
+    """
+
+    message: str = "Documents generated successfully"
     docx_filename: str
     apkg_filename: str
 
@@ -126,7 +142,12 @@ def gen_anki(
     pkg.write_to_file(file_path)  # type: ignore
 
 
-@app.post("/api/generate", response_model=DocumentResponse)
+@app.post(
+    "/api/generate",
+    response_model=DocumentResponse,
+    summary="生成文档",
+    description="根据提供的内容生成Word文档(.docx)和Anki卡组(.apkg)文件",
+)
 async def generate_documents(request: ChunkDocument):
     output_dir = Path("/app/output") if PRODUCTION else Path("./temp")
     file_id = generate()
@@ -162,7 +183,11 @@ async def generate_documents(request: ChunkDocument):
         raise HTTPException(status_code=500, detail=str(e))
 
 
-@app.get("/api/download/{file_type}/{filename}")
+@app.get(
+    "/api/download/{file_type}/{filename}",
+    summary="下载文件",
+    description="下载之前生成的.docx或.apkg文件",
+)
 async def download_file(file_type: str, filename: str):
     if file_type not in ["docx", "apkg"]:
         raise HTTPException(status_code=400, detail="Invalid file type")
@@ -186,7 +211,7 @@ async def download_file(file_type: str, filename: str):
     )
 
 
-@app.get("/api/")
+@app.get("/api/", summary="API根路径", description="检查API是否正在运行")
 async def root():
     return {"message": "Anki Maker API is running"}
 
