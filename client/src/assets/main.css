@@ -1,0 +1,34 @@
+@import "tailwindcss";
+
+@layer components {
+    .btn-primary {
+        @apply border border-secondary-300 border-solid rounded-lg hover:bg-secondary-100 active:bg-secondary-200 transition-colors;
+    }
+
+    .editor {
+        font-family: Georgia, 'Times New Roman', '宋体', serif;
+    }
+}
+
+@theme {
+    --color-primary-50: #F9FCFB;
+    --color-primary-100: #F4F9F7;
+    --color-primary-200: #E3EFEA;
+    --color-primary-300: #D2E5DD;
+    --color-primary-400: #B1D2C4;
+    --color-primary-500: #8FBFAA;
+    --color-primary-600: #81AC99;
+    --color-primary-700: #567366;
+    --color-primary-800: #40564D;
+    --color-primary-900: #2B3933;
+    --color-secondary-50: #F6F6F6;
+    --color-secondary-100: #ECECEC;
+    --color-secondary-200: #D0D0D0;
+    --color-secondary-300: #B4B4B4;
+    --color-secondary-400: #7C7C7C;
+    --color-secondary-500: #444444;
+    --color-secondary-600: #3D3D3D;
+    --color-secondary-700: #292929;
+    --color-secondary-800: #1F1F1F;
+    --color-secondary-900: #141414;
+}
