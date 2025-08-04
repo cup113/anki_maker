@@ -1,6 +1,6 @@
-# server/main.py
 from fastapi import FastAPI, HTTPException, Response
 from fastapi.staticfiles import StaticFiles
+from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from nanoid import generate
 from pathlib import Path
@@ -25,6 +25,16 @@ app = FastAPI(
         "name": "Apache 2.0 License",
     },
 )
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+
 PRODUCTION = getenv("APP_ENV") == "production"
 
 
