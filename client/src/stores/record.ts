@@ -236,10 +236,48 @@ export const useRecordStore = defineStore("record", () => {
         chunkDocument.value = new ChunkDocument("New " + nanoid(8), []);
     }
 
-    function download_export() {
-        const jsonContent = JSON.stringify(chunkDocument.value, null, 2);
-        const blob = new Blob([jsonContent], { type: "application/json" });
-        saveAs(blob, "AL_document.json");
+    function download_export(options: { json: boolean; word: boolean; apkg: boolean }) {
+        if (options.json) {
+            const jsonContent = JSON.stringify(chunkDocument.value, null, 2);
+            const blob = new Blob([jsonContent], { type: "application/json" });
+            saveAs(blob, `${chunkDocument.value.title}.json`);
+        }
+
+        if (options.word || options.apkg) {
+            fetch('/api/generate', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    ...chunkDocument.value,
+                    title: chunkDocument.value.title.replace(/[^a-zA-Z0-9\u4e00-\u9fa5-_]/g, '_')
+                }),
+            })
+                .then(response => response.json())
+                .then(data => {
+                    if (options.word) {
+                        const filename = data.docx_filename;
+                        const link = document.createElement('a');
+                        link.href = `/api/download/docx/${filename}`;
+                        link.download = `${chunkDocument.value.title.replace(/[^a-zA-Z0-9\u4e00-\u9fa5-_]/g, '_')}.docx`;
+                        link.click();
+                    }
+
+                    if (options.apkg) {
+                        const filename = data.apkg_filename;
+                        const link = document.createElement('a');
+                        link.href = `/api/download/apkg/${filename}`;
+                        link.download = `${chunkDocument.value.title.replace(/[^a-zA-Z0-9\u4e00-\u9fa5-_]/g, '_')}.apkg`;
+                        link.click();
+                    }
+                })
+                .catch(error => {
+                    console.error('生成文件时出错:', error);
+                    const toastsStore = useToastsStore();
+                    toastsStore.add_toast("下载失败", "生成文件时出错，请重试");
+                });
+        }
     }
 
     return {

@@ -3,3 +3,4 @@ __pycache__
 *.docx
 AL_*.json
 .vscode
+temp

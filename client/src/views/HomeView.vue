@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { ref } from 'vue';
 import { onKeyStroke } from '@vueuse/core';
 
 import ChunkItem from '@/components/ChunkItem.vue';
@@ -13,6 +14,27 @@ import {
 import { useRecordStore, deckTypes } from '@/stores/record';
 
 const recordStore = useRecordStore();
+
+// 下载选项模态框相关
+const showDownloadModal = ref(false);
+const selectedDownloads = ref({
+  json: false,
+  word: false,
+  apkg: false,
+});
+
+const openDownloadModal = () => {
+  showDownloadModal.value = true;
+};
+
+const closeDownloadModal = () => {
+  showDownloadModal.value = false;
+};
+
+const confirmDownload = async () => {
+  await recordStore.download_export(selectedDownloads.value);
+  closeDownloadModal();
+};
 
 onKeyStroke('s', e => {
   if (e.ctrlKey) {
@@ -65,9 +87,41 @@ onKeyStroke('s', e => {
       <button class="text-primary-700 btn-primary p-2" @click="recordStore.chunkDocument.add_record">
         <AddIcon></AddIcon>
       </button>
-      <button class="text-primary-700 btn-primary p-2" @click="recordStore.download_export">
+      <button class="text-primary-700 btn-primary p-2" @click="openDownloadModal">
         <DownloadIcon></DownloadIcon>
       </button>
     </section>
   </main>
+
+  <!-- 下载选项模态框 -->
+  <div v-if="showDownloadModal" class="fixed inset-0 bg-secondary-500/50 flex items-center justify-center z-50">
+    <div class="bg-white rounded-lg p-6 w-96">
+      <h3 class="text-lg font-bold mb-4">选择要下载的文件类型</h3>
+      <div class="space-y-3 mb-6">
+        <label class="flex items-center">
+          <input type="checkbox" v-model="selectedDownloads.json" class="mr-2 h-5 w-5">
+          <span class="text-gray-700">JSON 文件 (文档数据)</span>
+        </label>
+        <label class="flex items-center">
+          <input type="checkbox" v-model="selectedDownloads.word" class="mr-2 h-5 w-5">
+          <span class="text-gray-700">Word 文件 (文档格式)</span>
+        </label>
+        <label class="flex items-center">
+          <input type="checkbox" v-model="selectedDownloads.apkg" class="mr-2 h-5 w-5">
+          <span class="text-gray-700">APKG 文件 (Anki 卡组)</span>
+        </label>
+      </div>
+      <div class="flex justify-end space-x-3">
+        <button @click="closeDownloadModal"
+          class="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-100">
+          取消
+        </button>
+        <button @click="confirmDownload" class="px-4 py-2 bg-primary-500 text-white rounded-md hover:bg-primary-600"
+          :disabled="!selectedDownloads.json && !selectedDownloads.word && !selectedDownloads.apkg"
+          :class="{ 'opacity-50 cursor-not-allowed': !selectedDownloads.json && !selectedDownloads.word && !selectedDownloads.apkg }">
+          下载
+        </button>
+      </div>
+    </div>
+  </div>
 </template>

@@ -1,17 +1,19 @@
 # server/main.py
 from fastapi import FastAPI, HTTPException, Response
+from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
-from tempfile import TemporaryDirectory
 from nanoid import generate
 from pathlib import Path
 from typing import Literal
+from os import getenv
 
 from genanki import Model, Note, Deck, Package  # type: ignore
 
-from data_models import Chunk, ChunkDocument
-from document_utils import create_document, generate_tables, generate_footer
+from server.data_models import Chunk, ChunkDocument
+from server.document_utils import create_document, generate_tables, generate_footer
 
 app = FastAPI(title="Anki Maker API")
+PRODUCTION = getenv("APP_ENV") == "production"
 
 
 class DocumentResponse(BaseModel):
@@ -124,56 +126,48 @@ def gen_anki(
     pkg.write_to_file(file_path)  # type: ignore
 
 
-@app.post("/generate", response_model=DocumentResponse)
+@app.post("/api/generate", response_model=DocumentResponse)
 async def generate_documents(request: ChunkDocument):
-    with TemporaryDirectory() as temp_dir:
-        temp_path = Path(temp_dir)
-        file_id = str(generate())
+    output_dir = Path("/app/output") if PRODUCTION else Path("./temp")
+    file_id = generate()
 
-        json_file_path = temp_path / f"{file_id}.json"
-        with open(json_file_path, "w", encoding="utf-8") as f:
-            f.write(request.model_dump_json())
+    try:
+        document = request
+        doc = create_document(document)
+        generate_tables(doc, document.records)
+        generate_footer(doc, document.footer)
 
-        try:
-            document = request
-            doc = create_document(document)
-            generate_tables(doc, document.records)
-            generate_footer(doc, document.footer)
+        docx_file_path = output_dir / f"{file_id}.docx"
+        doc.save(str(docx_file_path))
 
-            docx_file_path = temp_path / f"{file_id}.docx"
-            doc.save(str(docx_file_path))
+        apkg_file_path = output_dir / f"{file_id}.apkg"
+        gen_anki(
+            document.records,
+            document.deckType,
+            apkg_file_path,
+        )
 
-            apkg_file_path = temp_path / f"{file_id}.apkg"
-            gen_anki(
-                document.records,
-                document.deckType,
-                apkg_file_path,
-            )
+        final_docx_path = Path(output_dir) / f"{file_id}.docx"
+        final_apkg_path = Path(output_dir) / f"{file_id}.apkg"
 
-            output_dir = Path("/app/output")
-            output_dir.mkdir(exist_ok=True)
+        docx_file_path.rename(final_docx_path)
+        apkg_file_path.rename(final_apkg_path)
 
-            final_docx_path = output_dir / f"{file_id}.docx"
-            final_apkg_path = output_dir / f"{file_id}.apkg"
-
-            docx_file_path.rename(final_docx_path)
-            apkg_file_path.rename(final_apkg_path)
-
-            return DocumentResponse(
-                message="Documents generated successfully",
-                docx_filename=f"{file_id}.docx",
-                apkg_filename=f"{file_id}.apkg",
-            )
-        except Exception as e:
-            raise HTTPException(status_code=500, detail=str(e))
+        return DocumentResponse(
+            message="Documents generated successfully",
+            docx_filename=f"{file_id}.docx",
+            apkg_filename=f"{file_id}.apkg",
+        )
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
 
-@app.get("/download/{file_type}/{filename}")
+@app.get("/api/download/{file_type}/{filename}")
 async def download_file(file_type: str, filename: str):
     if file_type not in ["docx", "apkg"]:
         raise HTTPException(status_code=400, detail="Invalid file type")
 
-    file_path = Path("/app/output") / filename
+    file_path = Path("/app/output" if PRODUCTION else "./temp") / filename
 
     if not file_path.exists():
         raise HTTPException(status_code=404, detail="File not found")
@@ -188,10 +182,13 @@ async def download_file(file_type: str, filename: str):
     return Response(
         content=content,
         media_type=media_types[file_type],
-        headers={"Content-Disposition": f"attachment; filename={filename}"},
+        headers={"Content-Disposition": f"attachment"},
     )
 
 
-@app.get("/")
+@app.get("/api/")
 async def root():
     return {"message": "Anki Maker API is running"}
+
+
+app.mount("/", StaticFiles(directory="client/dist", html=True), name="static")

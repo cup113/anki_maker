@@ -11,8 +11,8 @@ from docx.oxml.ns import qn
 from docx.oxml import OxmlElement
 from docx.oxml.xmlchemy import BaseOxmlElement
 
-from data_models import Chunk, ChunkDocument
-from html_parser import HTMLToWordParser
+from server.data_models import Chunk, ChunkDocument
+from server.html_parser import HTMLToWordParser
 
 
 def create_document(chunk_document: ChunkDocument) -> DocumentClass:
