@@ -1,22 +1,23 @@
-import tkinter as tk
-from tkinter import filedialog
-from os import startfile
-from json import loads as json_loads
-from typing import Literal, Callable
+# server/main.py
+from fastapi import FastAPI, HTTPException, Response
+from pydantic import BaseModel
+from tempfile import TemporaryDirectory
+from nanoid import generate
 from pathlib import Path
-from argparse import ArgumentParser
+from typing import Literal
 
 from genanki import Model, Note, Deck, Package  # type: ignore
 
 from data_models import Chunk, ChunkDocument
 from document_utils import create_document, generate_tables, generate_footer
 
+app = FastAPI(title="Anki Maker API")
 
-def load_document(file_path: Path) -> ChunkDocument:
-    with open(file_path, "r", encoding="utf-8") as f:
-        raw = f.read()
-        data = json_loads(raw)
-        return ChunkDocument.from_dict(data)
+
+class DocumentResponse(BaseModel):
+    message: str
+    docx_filename: str
+    apkg_filename: str
 
 
 def gen_anki(
@@ -123,87 +124,74 @@ def gen_anki(
     pkg.write_to_file(file_path)  # type: ignore
 
 
-def gen(file_path: Path):
-    document = load_document(file_path)
-    doc = create_document(document)
-    generate_tables(doc, document.records)
-    generate_footer(doc, document.footer)
-    doc.save(str(file_path.parent / f"{file_path.stem}.docx"))
-    gen_anki(
-        document.records,
-        document.deckType,
-        file_path.parent / f"{file_path.stem}.apkg",
+@app.post("/generate", response_model=DocumentResponse)
+async def generate_documents(request: ChunkDocument):
+    with TemporaryDirectory() as temp_dir:
+        temp_path = Path(temp_dir)
+        file_id = str(generate())
+
+        json_file_path = temp_path / f"{file_id}.json"
+        with open(json_file_path, "w", encoding="utf-8") as f:
+            f.write(request.model_dump_json())
+
+        try:
+            document = request
+            doc = create_document(document)
+            generate_tables(doc, document.records)
+            generate_footer(doc, document.footer)
+
+            docx_file_path = temp_path / f"{file_id}.docx"
+            doc.save(str(docx_file_path))
+
+            apkg_file_path = temp_path / f"{file_id}.apkg"
+            gen_anki(
+                document.records,
+                document.deckType,
+                apkg_file_path,
+            )
+
+            output_dir = Path("/app/output")
+            output_dir.mkdir(exist_ok=True)
+
+            final_docx_path = output_dir / f"{file_id}.docx"
+            final_apkg_path = output_dir / f"{file_id}.apkg"
+
+            docx_file_path.rename(final_docx_path)
+            apkg_file_path.rename(final_apkg_path)
+
+            return DocumentResponse(
+                message="Documents generated successfully",
+                docx_filename=f"{file_id}.docx",
+                apkg_filename=f"{file_id}.apkg",
+            )
+        except Exception as e:
+            raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/download/{file_type}/{filename}")
+async def download_file(file_type: str, filename: str):
+    if file_type not in ["docx", "apkg"]:
+        raise HTTPException(status_code=400, detail="Invalid file type")
+
+    file_path = Path("/app/output") / filename
+
+    if not file_path.exists():
+        raise HTTPException(status_code=404, detail="File not found")
+
+    media_types = {
+        "docx": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+        "apkg": "application/octet-stream",
+    }
+
+    content = file_path.read_bytes()
+
+    return Response(
+        content=content,
+        media_type=media_types[file_type],
+        headers={"Content-Disposition": f"attachment; filename={filename}"},
     )
 
 
-def select_file(on_success: Callable[[Path], None], on_fail: Callable[[], None]):
-    file_path = filedialog.askopenfilename(filetypes=[("JSON Files", "*.json")])
-    if file_path:
-        gen(Path(file_path))
-        on_success(Path(file_path))
-    else:
-        on_fail()
-
-
-def get_folder_opener(folder_path: Path):
-    def open_folder():
-        startfile(folder_path)
-
-    return open_folder
-
-
-def main():
-    parser = ArgumentParser(description="Anki Maker")
-    parser.add_argument("file", nargs="?", help="File to open")
-    parser.add_argument(
-        "--open-folder", action="store_true", help="Open the folder after generating"
-    )
-    args = parser.parse_args()
-
-    if args.file:
-        file_path = Path(args.file)
-        if file_path.exists():
-            gen(Path(args.file))
-            if args.open_folder:
-                file_opener = get_folder_opener(file_path.parent)
-                file_opener()
-        else:
-            print(f"File not found: {args.file}")
-    else:
-        root = tk.Tk()
-        root.title("Anki Maker")
-        root.geometry("240x240")
-
-        button = tk.Button(
-            root,
-            text="选择文件",
-            command=lambda: select_file(on_select_file_success, on_select_file_fail),
-        )
-        button.pack(pady=20)
-
-        success_label = tk.Label(root, text="", fg="black", font=("Arial", 12))
-        success_label.pack(pady=10)
-
-        open_folder_button = tk.Button(root, text="打开文件夹")
-        open_folder_button.pack_forget()
-
-        def on_select_file_success(file_path: Path):
-            success_label.config(
-                text=f"{file_path.parent.stem}\n{file_path.stem}\nDone",
-                fg="green",
-                font=("Arial", 14, "bold"),
-            )
-            open_folder_button.config(command=get_folder_opener(Path(file_path).parent))
-            open_folder_button.pack(pady=10)
-
-        def on_select_file_fail():
-            success_label.config(  # type: ignore
-                text="File not chosen", fg="orange", font=("Arial", 12, "bold")
-            )
-            open_folder_button.pack_forget()
-
-        root.mainloop()
-
-
-if __name__ == "__main__":
-    main()
+@app.get("/")
+async def root():
+    return {"message": "Anki Maker API is running"}

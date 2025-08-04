@@ -1,0 +1,17 @@
+# docker-compose.yml
+version: '3.8'
+
+services:
+  fastapi:
+    build:
+      context: .
+      dockerfile: Dockerfile.fastapi
+    ports:
+      - "4134:4134"
+    restart: always
+    depends_on:
+      - pocketbase
+    environment:
+      - APP_ENV=production
+    volumes:
+      - generated_files:/app/output

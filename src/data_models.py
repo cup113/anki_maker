@@ -1,26 +1,24 @@
-from dataclasses import dataclass, field
-from typing import Any, Literal
-
-from dataclasses_json import dataclass_json
+from typing import Literal
+from pydantic import BaseModel, Field
 
 
-@dataclass_json
-@dataclass
-class Addition:
+class Addition(BaseModel):
     id: str
     icon: str
     front: str
     back: str
 
+    @classmethod
+    def empty_additions(cls) -> list["Addition"]:
+        return []
 
-@dataclass_json
-@dataclass
-class Chunk:
+
+class Chunk(BaseModel):
     id: str
     level: str
     front: str
     back: str
-    additions: list[Addition] = field(default_factory=list)
+    additions: list[Addition] = Field(default_factory=Addition.empty_additions)
 
     def get_merged_front(self) -> str:
         SPACES = "&nbsp;" * 2
@@ -36,22 +34,14 @@ class Chunk:
             for a in self.additions
         )
 
-    @classmethod
-    def dissolve_p_tags(cls, text: str) -> str:
+    @staticmethod
+    def dissolve_p_tags(text: str) -> str:
         return text.replace("<p>", "").replace("</p>", "")
 
-    @classmethod
-    def from_dict(cls, d: Any) -> "Chunk": ...
 
-
-@dataclass_json
-@dataclass
-class ChunkDocument:
+class ChunkDocument(BaseModel):
     version: int
     records: list[Chunk]
     title: str
-    footer: str = field(default="")
-    deckType: Literal["one-side", "two-sides", "type"] = field(default="one-side")
-
-    @classmethod
-    def from_dict(cls, d: Any) -> "ChunkDocument": ...
+    footer: str = Field(default="")
+    deckType: Literal["one-side", "two-sides", "type"] = Field(default="one-side")
