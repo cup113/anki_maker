@@ -28,8 +28,9 @@ import ToastList from './components/ToastList.vue';
   <footer class="border-t border-t-gray-500 p-2 mt-20">
     <div class="text-center text-gray-500 flex gap-2 justify-center items-center">
       <span>cup11 © 2025</span>
-      <a href="https://github.com/cup113/anki-linguist">
+      <a href="https://github.com/cup113/anki-linguist" class="flex items-center gap-2">
         <GithubIcon></GithubIcon>
+        <img src="https://img.shields.io/github/v/tag/cup113/anki_maker?label=%E5%BD%93%E5%89%8D%E7%89%88%E6%9C%AC" />
       </a>
     </div>
   </footer>
