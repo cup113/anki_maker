@@ -128,11 +128,11 @@ def gen(file_path: Path):
     doc = create_document(document)
     generate_tables(doc, document.records)
     generate_footer(doc, document.footer)
-    doc.save(str(file_path.parent / f"{file_path.stem}_output.docx"))
+    doc.save(str(file_path.parent / f"{file_path.stem}.docx"))
     gen_anki(
         document.records,
         document.deckType,
-        file_path.parent / f"{file_path.stem}_output.apkg",
+        file_path.parent / f"{file_path.stem}.apkg",
     )
 
 
