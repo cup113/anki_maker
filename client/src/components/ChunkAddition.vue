@@ -29,9 +29,9 @@ const addition = computed(() => {
         <div class="grow px-2 py-1">
             <TiptapEditor v-model="addition.back" />
         </div>
-        <button class="btn-primary text-red-700 py-1 px-2"
+        <button class="btn-primary text-red-700 rounded-full p-2"
             @click="recordStore.chunkDocument.delete_addition(chunkId, additionId)">
-            <DeleteIcon />
+            <DeleteIcon class="w-4 h-4" />
         </button>
     </div>
 </template>
