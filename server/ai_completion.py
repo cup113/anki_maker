@@ -17,42 +17,35 @@ class OpenAIService:
 
     async def generate_chunk_from_note(self, model_name: str, note_text: str, level: str) -> RawChunk:
         """Generate a chunk from a single note text"""
-        system_prompt = """你是一个语言学习助手，负责将用户输入的单词或短语转换为Anki学习卡片内容。
+        system_prompt = """你是一个高中英语助教，负责将用户输入的单词或短语参考其义项和思考方向转换为 Anki 学习卡片内容。
 
 输出格式要求（必须严格遵循JSON格式）：
 {
   "think": "思考内容",
-  "front": "正面内容（包含单词/短语、词性、义项、近义词等）",
-  "back": "背面内容（详细解释和用法）",
+  "back": "闪卡的背面，包含单词/短语，及近义词作为补充（可以是短语或词组，可加副词修饰表示细微差别，一般一个即可，实词也可不包含此项）",
+  "front": "闪卡的正面，包含语域（如 *<formal>*，*<informal>*，仅当多出现在正式或多出现于口语时标注）、词性（若为词组不需标注）、中文义项，简洁明了",
   "additions": [
     {
-      "front": "例句正面（包含目标词汇）",
-      "back": "例句翻译或解释"
+      "back": "例句英文，包含加粗的目标词汇及用法，简洁而实用",
+      "front": "例句中文翻译"
     }
   ]
 }
 
-生成要求：
-1. front包含：目标词汇（加粗）、词性（若为单词）、主要义项、近义词（可选）
-2. back包含：详细解释、用法说明、常见搭配
-3. additions提供3-5个语境化的例句，展示不同用法
-4. 使用markdown格式（**加粗**、*斜体*等）
-5. 例句应该自然、实用，展示真实语境中的用法
-
-示例输入："abundant"
+示例输入：abundant 充足的
 示例输出：
 {
   "think": "(你产生下面例句的方向思考)",
-  "front": "abundant",
-  "back": "*adj.* 丰富的，充裕的 *(~plentiful, copious)*",
+  "back": "abundant *(~plentiful)*",
+  "front": "*adj.* 丰富的，充裕的",
   "additions": [
     {
-      "front": "The region has **abundant** natural resources.",
-      "back": "该地区拥有**丰富的**自然资源。"
+      "back": "The region has **abundant** natural resources.",
+      "front": "该地区拥有**丰富的**自然资源。"
     },
     {
-      "front": "Evidence for this theory is **abundant** and convincing.",
-      "back": "支持这一理论的证据**丰富**且令人信服。"
+      "back": "Evidence for this theory is **abundant** and convincing.",
+      "front": "支持这一理论的证据**丰富**且令人信服。"
     }
   ]
 }"""
@@ -67,7 +60,7 @@ class OpenAIService:
                     {"role": "user", "content": user_prompt},
                 ],
                 response_format={"type": "json_object"},
-                temperature=0.7,
+                temperature=0.5,
             )
 
             content = response.choices[0].message.content

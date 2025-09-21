@@ -3,7 +3,6 @@
     <h3 class="text-lg font-semibold text-gray-900 mb-4">AI 笔记处理</h3>
 
     <div class="space-y-4">
-      <!-- 输入区域 -->
       <div>
         <label class="block text-sm font-medium text-gray-700 mb-2">
           输入笔记（每行一个单词/短语，以#开头的行作为标题）
@@ -26,7 +25,7 @@
 
         <button @click="applyResults" :disabled="!hasResults"
           class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-md transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:bg-gray-400 disabled:cursor-not-allowed">
-          应用到文档
+          添加到文档
         </button>
 
         <button @click="clearResults" :disabled="!hasResults"
@@ -62,15 +61,18 @@
 
         <div class="border border-gray-200 rounded-md divide-y divide-gray-200 max-h-80 overflow-y-auto">
           <div v-for="(result, index) in processingState.results" :key="index" class="p-4">
-            <div class="flex items-center justify-between mb-2">
+            <div class="text-right">
               <span class="text-sm font-medium text-blue-600">Level {{ result.level }}</span>
-              <span class="text-sm text-gray-500 truncate max-w-xs">{{ result.front }}</span>
+            </div>
+            <div class="flex flex-col">
+              <div v-html="result.front"></div>
+              <div v-html="result.back" class="text-right"></div>
             </div>
 
-            <div v-if="result.additions.length" class="pl-4 border-l-2 border-gray-200 space-y-1 mt-2">
+            <div v-if="result.additions.length" class="pl-4 border-l-2 border-gray-200">
               <div v-for="(addition, addIndex) in result.additions" :key="addIndex" class="text-sm">
-                <span class="font-medium text-gray-700">{{ addition.front }}</span>
-                <span class="text-gray-500 ml-2">{{ addition.back }}</span>
+                <div class="font-medium text-gray-700" v-html="addition.front"></div>
+                <div class="text-gray-700 text-right" v-html="addition.back"></div>
               </div>
             </div>
           </div>
@@ -85,7 +87,7 @@ import { computed, ref } from 'vue'
 import { useAIStore } from '@/stores/ai'
 import { ChunkRecord, useRecordStore } from '@/stores/record'
 import { aiService } from '@/services/aiService'
-import { marked } from 'marked'
+import { nanoid } from 'nanoid'
 
 const aiStore = useAIStore()
 const recordStore = useRecordStore()
@@ -130,33 +132,32 @@ async function processNotes() {
   }
 }
 
-async function applyResults() {
+function applyResults() {
   if (!hasResults.value) return
 
-  for (const result of processingState.value.results) {
-    // 转换markdown为HTML
-    const front = await marked.parse(result.front) || ''
-    const back = await marked.parse(result.back) || ''
+  const currentLength = processingState.value.results.length
 
-    // 清空原有additions并添加新的
+  for (const result of processingState.value.results) {
     const additions = []
     for (const addition of result.additions) {
       additions.push({
-        id: crypto.randomUUID(),
+        id: nanoid(),
         icon: '→',
-        front: await marked.parse(addition.front) || '',
-        back: await marked.parse(addition.back) || ''
+        front: addition.front,
+        back: addition.back
       })
     }
 
     recordStore.chunkDocument.records.push(new ChunkRecord(
-      crypto.randomUUID(),
-      "1", // TODO
-      front,
-      back,
+      nanoid(),
+      result.level,
+      result.front,
+      result.back,
       additions
     ))
   }
+
+  aiStore.clearFirstResults(currentLength)
 
   recordStore.save_document()
 }
@@ -166,7 +167,3 @@ function clearResults() {
   notesInput.value = ''
 }
 </script>
-
-<style scoped>
-/* 所有样式已迁移到Tailwind CSS类 */
-</style>

@@ -1,5 +1,6 @@
 import { defineStore } from "pinia";
 import { useLocalStorage } from "@vueuse/core";
+import { marked } from "marked";
 
 export interface AIConfig {
   baseUrl: string;
@@ -68,11 +69,31 @@ export const useAIStore = defineStore("ai", () => {
     };
   }
 
+  function marked_instant(markdownText: string): string {
+    return `${marked(markdownText, { async: false })}`
+  }
+
+  function process_markdown(result: AIProcessingResult): AIProcessingResult {
+    return {
+      ...result,
+      front: marked_instant(result.front),
+      back: marked_instant(result.back),
+      additions: result.additions.map(addition => ({
+        front: marked_instant(addition.front),
+        back: marked_instant(addition.back),
+      }))
+    }
+  }
+
   function updateProgress(result?: AIProcessingResult) {
     if (result) {
-      processingState.value.results.push(result);
+      processingState.value.results.push(process_markdown(result));
     }
     processingState.value.processedCount++;
+  }
+
+  function clearFirstResults(n: number) {
+    processingState.value.results.splice(0, n);
   }
 
   function completeProcessing() {
@@ -91,6 +112,7 @@ export const useAIStore = defineStore("ai", () => {
     resetProcessingState,
     startProcessing,
     updateProgress,
+    clearFirstResults,
     completeProcessing,
     setError
   };

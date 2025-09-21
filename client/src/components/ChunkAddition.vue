@@ -21,12 +21,12 @@ const addition = computed(() => {
 <template>
     <div class="flex text-center justify-center gap-4">
         <SimpleChoice v-model="addition.icon"></SimpleChoice>
-        <div class="grow px-2 py-1">
+        <div class="grow w-1/4 px-2 py-1">
             <TiptapEditor v-model="addition.front" />
         </div>
         <Separator class="bg-gray-300 h-5 w-0.5 mx-2" decorative orientation="vertical">
         </Separator>
-        <div class="grow px-2 py-1">
+        <div class="grow w-1/3 px-2 py-1">
             <TiptapEditor v-model="addition.back" />
         </div>
         <button class="btn-primary text-red-700 rounded-full p-2"
