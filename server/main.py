@@ -11,6 +11,7 @@ from genanki import Model, Note, Deck, Package  # type: ignore
 
 from server.data_models import Chunk, ChunkDocument
 from server.document_utils import create_document, generate_tables, generate_footer
+from server.ai_completion import RawChunk, OpenAIService
 
 app = FastAPI(
     title="Anki Maker API",
@@ -46,6 +47,42 @@ class DocumentResponse(BaseModel):
     message: str = "Documents generated successfully"
     docx_filename: str
     apkg_filename: str
+
+
+class AIProcessRequest(BaseModel):
+    """
+    AI处理请求模型
+    """
+
+    notes: list[str]
+    base_url: str
+    api_key: str
+    model_name: str
+    max_concurrent: int = 3
+
+
+class AISingleProcessRequest(BaseModel):
+    """
+    单个AI处理请求模型
+    """
+
+    note: str
+    level: str = "0"
+    base_url: str
+    api_key: str
+    model_name: str
+
+
+class AIProcessResponse(BaseModel):
+    """
+    AI处理响应模型
+    """
+
+    success: bool
+    results: list[RawChunk]
+    message: str = ""
+    processed_count: int = 0
+    total_count: int = 0
 
 
 def gen_anki(
@@ -219,6 +256,79 @@ async def download_file(file_type: str, filename: str):
         media_type=media_types[file_type],
         headers={"Content-Disposition": f"attachment"},
     )
+
+
+# 保留批量处理端点用于向后兼容，但实际处理逻辑已迁移到客户端
+@app.post(
+    "/api/ai/process-notes",
+    summary="AI处理笔记",
+    description="使用AI批量处理笔记文本，生成Anki卡片内容（已迁移到客户端处理）",
+)
+async def ai_process_notes(request: AIProcessRequest):
+    """
+    使用AI处理批量笔记，生成卡片内容
+    """
+    try:
+        if not request.api_key:
+            raise HTTPException(status_code=400, detail="API key is required")
+
+        # 创建服务实例
+        service = OpenAIService(request.base_url, request.api_key)
+        level_number = 0
+        results: list[RawChunk] = []
+
+        for note in request.notes:
+            if note.strip().startswith("#"):
+                level_number += 1
+                continue
+
+            if note.strip():  # 跳过空行
+                result = await service.generate_chunk_from_note(
+                    request.model_name, note.strip(), str(level_number)
+                )
+                results.append(result)
+
+        return AIProcessResponse(
+            success=True,
+            results=results,
+            message=f"成功处理 {len(results)} 条笔记",
+            processed_count=len(results),
+            total_count=len(
+                [
+                    n
+                    for n in request.notes
+                    if n.strip() and not n.strip().startswith("#")
+                ]
+            ),
+        )
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"AI处理失败: {str(e)}")
+
+
+@app.post(
+    "/api/ai/process-single-note",
+    summary="AI处理单个笔记",
+    description="使用AI处理单个笔记文本，生成Anki卡片内容",
+)
+async def ai_process_single_note(request: AISingleProcessRequest):
+    """
+    使用AI处理单个笔记，生成卡片内容
+    """
+    try:
+        if not request.api_key:
+            raise HTTPException(status_code=400, detail="API key is required")
+
+        # 使用现有的OpenAIService处理单个笔记
+        service = OpenAIService(request.base_url, request.api_key)
+        result = await service.generate_chunk_from_note(
+            request.model_name, request.note, request.level
+        )
+
+        return result
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"AI处理失败: {str(e)}")
 
 
 @app.get("/api/", summary="API根路径", description="检查API是否正在运行")
