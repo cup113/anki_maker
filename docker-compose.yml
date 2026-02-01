@@ -1,5 +1,5 @@
 # docker-compose.yml
-version: '3.8'
+version: "3.8"
 
 services:
   fastapi:
@@ -13,3 +13,9 @@ services:
       - APP_ENV=production
     volumes:
       - generated_files:/app/output
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:4134/api/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
