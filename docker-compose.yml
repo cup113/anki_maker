@@ -14,7 +14,13 @@ services:
     volumes:
       - generated_files:/app/output
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:4134/api/"]
+      test:
+        [
+          "CMD",
+          "python",
+          "-c",
+          "import urllib.request; import sys; exit(0) if urllib.request.urlopen('http://localhost:4134/api/').getcode() == 200 else exit(1)",
+        ]
       interval: 30s
       timeout: 10s
       retries: 3
