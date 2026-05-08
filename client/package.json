@@ -56,7 +56,7 @@
     "vue-tsc": "^2.2.8"
   },
   "pnpm": {
-    "ignoredBuiltDependencies": [
+    "onlyBuiltDependencies": [
       "esbuild",
       "vue-demi"
     ]
