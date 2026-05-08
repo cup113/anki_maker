@@ -7,6 +7,8 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from nanoid import generate
 
+from mcp.server.transport_security import TransportSecuritySettings
+
 from server.data_models import ChunkDocument
 from server.anki_utils import gen_anki
 from server.document_utils import create_document, generate_tables, generate_footer
@@ -152,7 +154,12 @@ async def get_draft_endpoint(draft_id: str):
     return data
 
 
-mcp_server = FastMCP("Anki Maker")
+mcp_server = FastMCP(
+    "Anki Maker",
+    transport_security=TransportSecuritySettings(
+        enable_dns_rebinding_protection=False
+    ),
+)
 register_tools(mcp_server)
 app.mount("/mcp", mcp_server.sse_app())
 
