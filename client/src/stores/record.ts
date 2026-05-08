@@ -231,6 +231,11 @@ export const useRecordStore = defineStore("record", () => {
         }
     }
 
+    function loadDocumentFromDraft(doc: ChunkDocument) {
+        chunkDocument.value = doc;
+        save_document();
+    }
+
     function new_document() {
         save_document();
         chunkDocument.value = new ChunkDocument("New " + nanoid(8), []);
@@ -290,5 +295,6 @@ export const useRecordStore = defineStore("record", () => {
         delete_document,
         download_export,
         new_document,
+        loadDocumentFromDraft,
     };
 });
