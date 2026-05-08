@@ -6,8 +6,6 @@ import ChunkItem from '@/components/ChunkItem.vue';
 import DownloadIcon from '@/components/Icon/DownloadIcon.vue'
 import AddIcon from '@/components/Icon/AddIcon.vue';
 import SaveIcon from '@/components/Icon/SaveIcon.vue';
-import AIConfig from '@/components/AIConfig.vue';
-import AINotesProcessor from '@/components/AINotesProcessor.vue';
 
 import TiptapEditor from '@/components/TiptapEditor.vue';
 import {
@@ -109,12 +107,6 @@ onKeyStroke('s', e => {
       </button>
     </section>
 
-    <!-- AI 功能区域 -->
-    <section class="bg-white rounded-xl shadow-md p-6 mb-6">
-      <h2 class="text-xl font-bold text-primary-800 mb-4">AI 辅助功能</h2>
-      <AIConfig />
-      <AINotesProcessor />
-    </section>
   </main>
 
   <div v-if="showDownloadModal" class="fixed inset-0 bg-secondary-900/70 flex items-center justify-center z-50 p-4">
