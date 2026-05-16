@@ -37,7 +37,7 @@
 
 - camelCase for variables/functions (TypeScript)
 - PascalCase for components/classes (both languages)
-- kebab-case for file names (Vue components)
+- PascalCase for file names (Vue components)
 - snake_case for Python variables/functions
 
 **Error Handling:**
