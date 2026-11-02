@@ -108,6 +108,18 @@ export class ChunkDocument {
         this.records.push(ChunkRecord.default());
     }
 
+    /** 在当前词条之后插入一条空词条，返回新词条的 id（键盘流用） */
+    public add_record_after(id: string): string {
+        const record = ChunkRecord.default();
+        const index = this.records.findIndex((item) => item.id === id);
+        if (index === -1) {
+            this.records.push(record);
+        } else {
+            this.records.splice(index + 1, 0, record);
+        }
+        return record.id;
+    }
+
     public find_record(id: string): ChunkRecord {
         return this.records.find((record) => record.id === id) ?? ChunkRecord.default();
     }
@@ -121,8 +133,10 @@ export class ChunkDocument {
         return false;
     }
 
-    public add_addition(id: string): void {
-        this.find_record(id).additions.push(Addition.default());
+    public add_addition(id: string): string {
+        const addition = Addition.default();
+        this.find_record(id).additions.push(addition);
+        return addition.id;
     }
 
     public find_addition(id: string, additionId: string): Addition {
@@ -241,47 +255,49 @@ export const useRecordStore = defineStore("record", () => {
         chunkDocument.value = new ChunkDocument("New " + nanoid(8), []);
     }
 
-    function download_export(options: { json: boolean; word: boolean; apkg: boolean }) {
-        if (options.json) {
-            const jsonContent = JSON.stringify(chunkDocument.value, null, 2);
-            const blob = new Blob([jsonContent], { type: "application/json" });
-            saveAs(blob, `${chunkDocument.value.title}.json`);
+    // 服务端一次 /api/generate 就同时产出 docx 与 apkg，缓存这次结果，
+    // 让「先点 Word、再点 APKG」不必重新生成。
+    let last_export: { title: string; docx: string; apkg: string } | null = null;
+
+    async function export_format(format: "json" | "word" | "apkg") {
+        const doc = chunkDocument.value;
+        const safe_title = doc.title.replace(/[^a-zA-Z0-9\u4e00-\u9fa5-_]/g, "_");
+
+        if (format === "json") {
+            const blob = new Blob([JSON.stringify(doc, null, 2)], { type: "application/json" });
+            saveAs(blob, `${doc.title}.json`);
+            return;
         }
 
-        if (options.word || options.apkg) {
-            fetch('/api/generate', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({
-                    ...chunkDocument.value,
-                    title: chunkDocument.value.title.replace(/[^a-zA-Z0-9\u4e00-\u9fa5-_]/g, '_')
-                }),
-            })
-                .then(response => response.json())
-                .then(data => {
-                    if (options.word) {
-                        const filename = data.docx_filename;
-                        const link = document.createElement('a');
-                        link.href = `/api/download/docx/${filename}`;
-                        link.download = `${chunkDocument.value.title.replace(/[^a-zA-Z0-9\u4e00-\u9fa5-_]/g, '_')}.docx`;
-                        link.click();
-                    }
-
-                    if (options.apkg) {
-                        const filename = data.apkg_filename;
-                        const link = document.createElement('a');
-                        link.href = `/api/download/apkg/${filename}`;
-                        link.download = `${chunkDocument.value.title.replace(/[^a-zA-Z0-9\u4e00-\u9fa5-_]/g, '_')}.apkg`;
-                        link.click();
-                    }
-                })
-                .catch(error => {
-                    console.error('生成文件时出错:', error);
-                    const toastsStore = useToastsStore();
-                    toastsStore.add_toast("下载失败", "生成文件时出错，请重试");
+        try {
+            if (last_export === null || last_export.title !== safe_title) {
+                const response = await fetch("/api/generate", {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json",
+                    },
+                    body: JSON.stringify({ ...doc, title: safe_title }),
                 });
+                if (!response.ok) {
+                    throw new Error(`generate failed: ${response.status}`);
+                }
+                const data = await response.json();
+                last_export = {
+                    title: safe_title,
+                    docx: data.docx_filename,
+                    apkg: data.apkg_filename,
+                };
+            }
+
+            const extension = format === "word" ? "docx" : "apkg";
+            const filename = format === "word" ? last_export.docx : last_export.apkg;
+            const link = document.createElement("a");
+            link.href = `/api/download/${extension}/${filename}`;
+            link.download = `${safe_title}.${extension}`;
+            link.click();
+        } catch (error) {
+            console.error("生成文件时出错:", error);
+            useToastsStore().add_toast("下载失败", "生成文件时出错，请重试");
         }
     }
 
@@ -293,7 +309,7 @@ export const useRecordStore = defineStore("record", () => {
         load_document,
         import_document,
         delete_document,
-        download_export,
+        export_format,
         new_document,
         loadDocumentFromDraft,
     };

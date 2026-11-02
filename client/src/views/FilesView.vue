@@ -1,122 +1,154 @@
 <script lang="ts" setup>
-import { computed } from 'vue';
-import { useRecordStore } from '@/stores/record';
-import { useToastsStore } from '@/stores/toasts';
-import { TreeRoot, TreeItem } from 'reka-ui';
-import DocumentIcon from '@/components/Icon/DocumentIcon.vue';
-import ImportIcon from '@/components/Icon/ImportIcon.vue';
-import DeleteIcon from '@/components/Icon/DeleteIcon.vue';
-import dayjs from 'dayjs';
+import { computed } from 'vue'
+import dayjs from 'dayjs'
+import { PopoverContent, PopoverPortal, PopoverRoot, PopoverTrigger } from 'reka-ui'
+import { useRecordStore } from '@/stores/record'
+import { useToastsStore } from '@/stores/toasts'
 
-const recordStore = useRecordStore();
-const toastsStore = useToastsStore();
+const recordStore = useRecordStore()
+const toastsStore = useToastsStore()
+
+interface StoredDocument {
+  records?: unknown[]
+  createdAt?: string
+  modifiedAt?: string
+}
+
 const items = computed(() => {
-    return recordStore.recordStorageTitles.map(title => {
-        const document = recordStore.read_document(title);
-        const createdAt: string = document?.createdAt ?? 'Unknown';
-        const modifiedAt: string = document?.modifiedAt ?? 'Unknown';
-        const amount: number = document?.records?.length ?? NaN;
+  return recordStore.recordStorageTitles.map((title) => {
+    const document = recordStore.read_document(title) as StoredDocument | null
+    return {
+      title,
+      amount: document?.records?.length ?? 0,
+      createdAt: document?.createdAt ?? '',
+      modifiedAt: document?.modifiedAt ?? '',
+    }
+  })
+})
 
-        return {
-            title,
-            createdAt,
-            modifiedAt,
-            amount,
-        };
-    });
-});
+function format_date(value: string) {
+  return value ? dayjs(value).format('MM-DD') : '—'
+}
 
 function delete_document(title: string) {
-    if (confirm("确定删除该文档？")) {
-        recordStore.delete_document(title);
-    }
+  if (confirm('确定删除该文档？')) {
+    recordStore.delete_document(title)
+  }
 }
 
 function load_document(title: string) {
-    recordStore.load_document(title);
-    toastsStore.add_toast('文档加载成功', `(${dayjs().format('HH:mm:ss')}) ${title}`);
+  recordStore.load_document(title)
+  toastsStore.add_toast('文档加载成功', `(${dayjs().format('HH:mm:ss')}) ${title}`)
 }
 
 function import_document(event: Event) {
-    const file = (event.target as HTMLInputElement).files?.[0];
-    if (!file) return;
+  const file = (event.target as HTMLInputElement).files?.[0]
+  if (!file) return
 
-    const reader = new FileReader();
-    reader.onload = () => {
-        try {
-            const result = reader.result;
-            if (typeof result !== 'string') {
-                alert('文件内容格式不正确');
-                return;
-            }
-            recordStore.import_document(result);
-        } catch (error) {
-            alert("导入失败：文件格式不正确。" + String(error));
-        }
-    };
-    reader.readAsText(file);
+  const reader = new FileReader()
+  reader.onload = () => {
+    try {
+      const result = reader.result
+      if (typeof result !== 'string') {
+        alert('文件内容格式不正确')
+        return
+      }
+      recordStore.import_document(result)
+    } catch (error) {
+      alert('导入失败：文件格式不正确。' + String(error))
+    }
+  }
+  reader.readAsText(file)
 }
 </script>
 
 <template>
-    <main class="p-6 max-w-6xl mx-auto">
-        <div class="bg-white rounded-xl shadow-md overflow-hidden">
-            <div class="border-b border-primary-200 bg-gradient-to-r from-primary-50 to-secondary-50 p-4">
-                <h2 class="text-2xl font-bold text-primary-800">文档管理</h2>
-            </div>
+  <main class="px-4 pb-8 sm:px-8">
+    <section class="flex items-baseline gap-3 border-b border-rule pb-4 pt-2">
+      <h1 class="font-book text-[26px] leading-tight tracking-tight sm:text-[30px]">文档</h1>
+      <span class="ml-auto text-[11.5px] text-muted">{{ items.length }} 份</span>
+    </section>
 
-            <TreeRoot :items="items" :get-key="item => item.title" v-slot="{ flattenItems }" class="px-6 py-4">
-                <div
-                    class="flex items-center gap-2 my-4 justify-between text-primary-700 font-bold bg-primary-100 rounded-lg p-3">
-                    <div class="w-12"></div>
-                    <div class="w-64 text-left">文档标题</div>
-                    <div class="w-20 text-center">卡片数</div>
-                    <div class="w-40 text-center">创建时间</div>
-                    <div class="w-40 text-center">修改时间</div>
-                    <div class="w-32 text-center">操作</div>
-                </div>
-                <TreeItem v-for="item in flattenItems" :key="item._id" v-bind="item.bind">
-                    <div
-                        class="flex items-center gap-2 my-3 justify-between bg-white border border-secondary-200 rounded-lg p-3 hover:shadow-md transition-shadow">
-                        <div class="w-12 flex justify-center">
-                            <DocumentIcon class="text-primary-600" />
-                        </div>
-                        <div class="w-64 text-left font-medium text-primary-900 truncate">{{ item.value.title }}</div>
-                        <div class="w-20 text-center font-mono bg-primary-100 rounded-full py-1 px-3 text-primary-700">
-                            {{ item.value.amount }}</div>
-                        <div class="w-40 text-center text-sm text-secondary-600">{{
-                            dayjs(item.value.createdAt).format('YYYY-MM-DD HH:mm') }}</div>
-                        <div class="w-40 text-center text-sm text-secondary-600">{{
-                            dayjs(item.value.modifiedAt).format('YYYY-MM-DD HH:mm') }}</div>
-                        <div class="w-32 text-center flex justify-center gap-2">
-                            <button class="btn-primary p-2 rounded-full text-primary-700 hover:text-primary-900"
-                                @click="load_document(item.value.title)" title="加载文档">
-                                <ImportIcon class="w-4 h-4" />
-                            </button>
-                            <button class="btn-primary p-2 rounded-full text-red-600 hover:text-red-800"
-                                @click="delete_document(item.value.title)" title="删除文档">
-                                <DeleteIcon class="w-4 h-4" />
-                            </button>
-                        </div>
-                    </div>
-                </TreeItem>
-            </TreeRoot>
+    <table class="w-full border-collapse text-left">
+      <thead>
+        <tr class="border-b border-rule-strong text-[9.5px] uppercase tracking-[0.12em] text-faint">
+          <th class="py-2 font-normal">文档</th>
+          <th class="w-12 py-2 text-right font-normal">条数</th>
+          <th class="hidden w-16 py-2 text-right font-normal sm:table-cell">创建</th>
+          <th class="w-16 py-2 text-right font-normal">修改</th>
+          <th class="w-9"></th>
+        </tr>
+      </thead>
 
-            <div v-if="items.length === 0" class="text-center py-12 text-secondary-500">
-                <DocumentIcon class="mx-auto w-12 h-12 mb-3 text-secondary-300" />
-                <p>暂无文档</p>
-            </div>
-        </div>
+      <tbody>
+        <tr
+          v-for="item in items"
+          :key="item.title"
+          class="border-b border-rule transition-colors hover:bg-wash"
+        >
+          <td class="py-3 pr-4">
+            <button
+              type="button"
+              class="max-w-[46ch] truncate text-left font-book text-[15.5px] transition-colors hover:text-ink"
+              :title="item.title"
+              @click="load_document(item.title)"
+            >
+              {{ item.title }}
+            </button>
+          </td>
+          <td class="py-3 text-right text-[11.5px] tabular-nums text-muted">{{ item.amount }}</td>
+          <td class="hidden py-3 text-right text-[11.5px] tabular-nums text-muted sm:table-cell">
+            {{ format_date(item.createdAt) }}
+          </td>
+          <td class="py-3 text-right text-[11.5px] tabular-nums text-muted">
+            {{ format_date(item.modifiedAt) }}
+          </td>
+          <td class="py-3 text-right">
+            <PopoverRoot>
+              <PopoverTrigger
+                class="ml-auto grid h-7 w-7 place-items-center rounded-full text-[14px] leading-none text-muted opacity-40 transition hover:bg-[#ece8df] hover:text-ink hover:opacity-100 focus:outline-none focus-visible:opacity-100"
+                aria-label="文档菜单"
+              >
+                ⋯
+              </PopoverTrigger>
 
-        <div class="bg-white rounded-xl shadow-md p-6 mt-6">
-            <div class="flex flex-wrap items-center gap-4 justify-center">
-                <span class="text-primary-800 font-medium">导入文档</span>
-                <input type="file" accept="application/json" @change="import_document"
-                    class="w-full max-w-md border-2 border-dashed border-primary-300 px-4 py-3 rounded-lg hover:border-primary-500 transition-colors focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-opacity-50">
-                <div class="text-sm text-secondary-500 ml-2">
-                    <p>支持 JSON 格式文件</p>
-                </div>
-            </div>
-        </div>
-    </main>
+              <PopoverPortal>
+                <PopoverContent
+                  align="end"
+                  :side-offset="4"
+                  class="z-50 w-28 rounded-[2px] border border-rule-strong bg-paper p-1 shadow-[0_6px_18px_rgba(45,42,38,0.10)]"
+                >
+                  <button
+                    type="button"
+                    class="block w-full rounded-[2px] px-2.5 py-1.5 text-left text-[12.5px] text-muted transition-colors hover:bg-wash hover:text-ink"
+                    @click="load_document(item.title)"
+                  >
+                    打开
+                  </button>
+                  <button
+                    type="button"
+                    class="block w-full rounded-[2px] px-2.5 py-1.5 text-left text-[12.5px] text-muted transition-colors hover:bg-wash hover:text-ink"
+                    @click="delete_document(item.title)"
+                  >
+                    删除
+                  </button>
+                </PopoverContent>
+              </PopoverPortal>
+            </PopoverRoot>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+
+    <p v-if="items.length === 0" class="py-10 text-center text-[12.5px] text-muted">
+      还没有保存过的文档
+    </p>
+
+    <div class="flex justify-center border-t border-rule py-4">
+      <label class="paper-link cursor-pointer text-[12px] text-muted transition-colors hover:text-ink">
+        导入 JSON…
+        <input type="file" accept="application/json" class="hidden" @change="import_document" />
+      </label>
+    </div>
+  </main>
 </template>

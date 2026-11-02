@@ -46,17 +46,18 @@ onMounted(async () => {
 </script>
 
 <template>
-  <main class="p-6 max-w-6xl mx-auto">
-    <div v-if="loading" class="flex flex-col items-center justify-center py-24">
-      <div class="w-10 h-10 border-4 border-primary-300 border-t-primary-600 rounded-full animate-spin mb-4"></div>
-      <p class="text-secondary-600 text-lg">正在加载草稿...</p>
+  <main class="px-4 py-20 sm:px-8">
+    <div v-if="loading" class="flex flex-col items-center gap-3">
+      <div class="h-6 w-6 animate-spin rounded-full border border-rule-strong border-t-ink"></div>
+      <p class="text-[12.5px] text-muted">正在加载草稿…</p>
     </div>
-    <div v-else-if="error" class="bg-white rounded-xl shadow-md p-8 text-center">
-      <div class="text-5xl mb-4 text-secondary-300">📄</div>
-      <h2 class="text-2xl font-bold text-secondary-700 mb-2">无法加载草稿</h2>
-      <p class="text-secondary-500 mb-6">{{ error }}</p>
-      <router-link to="/"
-        class="inline-block px-6 py-3 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors font-medium shadow-md">
+
+    <div v-else-if="error" class="text-center">
+      <p class="text-[12.5px] text-muted">{{ error }}</p>
+      <router-link
+        to="/"
+        class="paper-link mt-5 inline-block text-[12.5px] text-muted transition-colors hover:text-ink"
+      >
         返回首页
       </router-link>
     </div>
