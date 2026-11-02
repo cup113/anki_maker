@@ -2,6 +2,7 @@ import re
 from os import getenv
 from pathlib import Path
 from typing import Annotated, Literal
+from urllib.parse import quote
 
 from pydantic import Field
 
@@ -48,6 +49,16 @@ def _make_chunk_document(
     )
 
 
+def _url_segment(value: str) -> str:
+    """Percent-encode one URL path segment.
+
+    Titles are sanitized with a CJK-friendly pattern, so a filename or draft id
+    can contain non-ASCII characters; leaving them raw produces links that
+    Markdown renderers and HTTP clients mangle. Only unreserved characters stay.
+    """
+    return quote(value, safe="")
+
+
 def generate_files(document: ChunkDocument) -> dict[str, str]:
     from server.main import PRODUCTION
 
@@ -92,7 +103,9 @@ def register_tools(mcp):
         document = _make_chunk_document(chunks, title, footer, deck_type)
         file_info = generate_files(document)
         draft_id = save_draft(document.model_dump())
-        base_url = getenv("API_BASE_URL", "http://localhost:4134")
+        base_url = getenv("API_BASE_URL", "http://localhost:4134").rstrip("/")
+        docx_segment = _url_segment(file_info["docx_filename"])
+        apkg_segment = _url_segment(file_info["apkg_filename"])
 
         return (
             f"Cards generated successfully!\n\n"
@@ -100,9 +113,9 @@ def register_tools(mcp):
             f"- Cards: {len(document.records)}\n"
             f"- Deck type: {document.deckType}\n\n"
             f"Links:\n"
-            f"- Edit online: {base_url}/edit/{draft_id}\n"
-            f"- Download Word: {base_url}/api/download/docx/{file_info['docx_filename']}\n"
-            f"- Download Anki: {base_url}/api/download/apkg/{file_info['apkg_filename']}"
+            f"- Edit online: {base_url}/edit/{_url_segment(draft_id)}\n"
+            f"- Download Word: {base_url}/api/download/docx/{docx_segment}\n"
+            f"- Download Anki: {base_url}/api/download/apkg/{apkg_segment}"
         )
 
     return mcp

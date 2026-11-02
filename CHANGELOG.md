@@ -2,6 +2,11 @@
 
 ## [Unreleased]
 
+### Fixed
+
+- MCP tool now percent-encodes the dynamic part of its links, so a card set with a
+  Chinese title no longer yields URLs containing raw CJK characters
+
 ## [2.1.0] - 2026-11-02
 
 ### Added
