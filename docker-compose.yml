@@ -3,9 +3,9 @@ version: "3.8"
 
 services:
   fastapi:
-    build:
-      context: .
-      dockerfile: Dockerfile.fastapi
+    # 镜像由 .github/workflows/image.yml 构建并推到 ghcr.io，本地不再 build。
+    # 想从源码构建：docker compose build --no-cache
+    image: ghcr.io/cup113/anki_maker:latest
     ports:
       - "4134:4134"
     restart: always
