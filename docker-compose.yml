@@ -1,10 +1,9 @@
 # docker-compose.yml
-version: "3.8"
 
 services:
   fastapi:
     # 镜像由 .github/workflows/image.yml 构建并推到 ghcr.io，本地不再 build。
-    # 想从源码构建：docker compose build --no-cache
+    # 要从源码重建：docker build -f Dockerfile.fastapi -t ghcr.io/cup113/anki_maker:latest .
     image: ghcr.io/cup113/anki_maker:latest
     ports:
       - "4134:4134"
@@ -26,3 +25,6 @@ services:
       timeout: 10s
       retries: 3
       start_period: 40s
+
+volumes:
+  generated_files:
