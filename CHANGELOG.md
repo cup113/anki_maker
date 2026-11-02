@@ -2,6 +2,8 @@
 
 ## [Unreleased]
 
+## [2.1.0] - 2026-11-02
+
 ### Added
 
 - MCP (Model Context Protocol) server support for AI integration

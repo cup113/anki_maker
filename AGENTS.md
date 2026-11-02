@@ -4,12 +4,15 @@
 
 **Client (Vue 3 + TypeScript + Vite):**
 
-- `npm run dev` - Start development server
-- `npm run build` - Build for production with type checking
-- `npm run type-check` - Run TypeScript type checking
-- `npm run lint` - Run ESLint with auto-fix
-- `npm run format` - Format code with Prettier
-- `npm run test:unit` - Run Vitest unit tests
+Run from `client/`. The package manager is pnpm 11; the build-script allow-list lives in
+`client/pnpm-workspace.yaml` (`allowBuilds`), not in `package.json`.
+
+- `pnpm dev` - Start development server
+- `pnpm build` - Build for production with type checking
+- `pnpm type-check` - Run TypeScript type checking
+- `pnpm lint` - Run ESLint with auto-fix
+- `pnpm format` - Format code with Prettier
+- `pnpm test:unit` - Run Vitest unit tests
 
 **Server (Python FastAPI):**
 

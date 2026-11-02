@@ -43,9 +43,18 @@ Anki Maker 采用前后端分离的架构：
 git clone <repository-url>
 cd anki_maker
 
-docker-compose up -d
+docker compose pull
+docker compose up -d
 
 # 打开浏览器访问 http://localhost:4134
+```
+
+镜像 `ghcr.io/cup113/anki_maker:latest` 由 GitHub Actions 在每次推送到 `main`、以及每次推送
+`v*` 标签时构建（`v*` 标签另打 `2.1.0`、`2.1` 等版本号）。要从本地源码重建：
+
+```bash
+docker build -f Dockerfile.fastapi -t ghcr.io/cup113/anki_maker:latest .
+docker compose up -d
 ```
 
 ### 开发环境
@@ -83,6 +92,8 @@ python main.py
 5. 在每个条目中填写正面和背面内容
 6. 可以使用富文本编辑器添加格式（粗体、斜体、下标等）
 7. 点击下载按钮，选择需要的格式进行导出
+8. 按 `?` 查看快捷键：`Ctrl / ⌘ + Enter` 新建条目，`Enter` 在行内换行，`Alt + Enter`
+   添加附加条目
 
 ## 项目结构
 
@@ -96,7 +107,8 @@ anki_maker/
 │   │   ├── services/       # 外部服务
 │   │   ├── stores/         # Pinia 状态管理
 │   │   └── views/          # 页面视图
-│   └── package.json
+│   ├── package.json
+│   └── pnpm-workspace.yaml # 依赖与构建脚本许可（allowBuilds）
 ├── server/                 # 后端 FastAPI 服务
 │   ├── main.py             # API 入口和路由
 │   ├── data_models.py      # Pydantic 数据模型
@@ -106,7 +118,9 @@ anki_maker/
 │   ├── html_parser.py      # HTML 转 Word 解析器
 │   ├── mcp_tools.py        # MCP 服务器和工具
 │   └── tool_inputs.py      # MCP 工具输入模型
-├── docker-compose.yml      # Docker 部署配置
+├── .github/workflows/
+│   └── image.yml           # 镜像构建并发布到 ghcr.io
+├── docker-compose.yml      # Docker 部署配置（拉取已发布的镜像）
 └── Dockerfile.fastapi      # FastAPI Docker 配置
 ```
 
