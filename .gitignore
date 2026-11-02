@@ -4,3 +4,4 @@ __pycache__
 AL_*.json
 .vscode
 temp
+.pnpm-store

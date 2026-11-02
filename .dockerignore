@@ -1,0 +1,19 @@
+.git
+.github
+.vscode
+.pnpm-store
+temp
+
+# 依赖与构建产物：镜像内自己装、自己构建
+**/node_modules
+client/dist
+client/coverage
+
+# Python 运行时垃圾
+**/__pycache__
+**/*.pyc
+server/output
+output
+
+*.tsbuildinfo
+*.log
