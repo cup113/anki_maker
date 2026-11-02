@@ -2,6 +2,11 @@
 
 ## [Unreleased]
 
+### Added
+
+- AI page with two routes: MCP setup for Claude Code / Cursor / Claude Desktop / any SSE
+  client, and a copy-prompt flow that turns a chat reply back into cards
+
 ### Fixed
 
 - MCP tool now percent-encodes the dynamic part of its links, so a card set with a

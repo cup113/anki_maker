@@ -63,3 +63,10 @@
     color: var(--color-ink);
     border-bottom-color: var(--color-ink);
 }
+
+/* 代码块和提示词：系统滚动条太粗，一条纸色的细条才不抢眼 */
+.fine-scroll {
+    scrollbar-width: thin;
+    scrollbar-color: var(--color-rule-strong) transparent;
+}
+

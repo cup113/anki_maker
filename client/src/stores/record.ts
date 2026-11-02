@@ -250,6 +250,12 @@ export const useRecordStore = defineStore("record", () => {
         save_document();
     }
 
+    /** 追加 AI 解析出的卡片，并立即落盘——AI 页不经过首页的保存按钮 */
+    function append_records(records: ChunkRecord[]) {
+        chunkDocument.value.records.push(...records);
+        save_document();
+    }
+
     function new_document() {
         save_document();
         chunkDocument.value = new ChunkDocument("New " + nanoid(8), []);
@@ -310,6 +316,7 @@ export const useRecordStore = defineStore("record", () => {
         import_document,
         delete_document,
         export_format,
+        append_records,
         new_document,
         loadDocumentFromDraft,
     };

@@ -5,3 +5,4 @@ AL_*.json
 .vscode
 temp
 .pnpm-store
+.clarity
