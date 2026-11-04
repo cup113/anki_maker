@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref } from 'vue'
 
-import { CARD_PROMPT, CardParseError, parse_cards } from '@/ai/prompt'
+import { CARD_PROMPT, CardParseError, parse_reply } from '@/ai/prompt'
 import CopyButton from '@/components/CopyButton.vue'
 import { useRecordStore } from '@/stores/record'
 
@@ -14,11 +14,16 @@ const show_prompt = ref(false)
 
 function apply() {
   try {
-    const records = parse_cards(reply.value)
-    recordStore.append_records(records)
+    const document = parse_reply(reply.value)
+    const current = recordStore.chunkDocument.records.length
+    if (current > 0 && !confirm(`当前文档有 ${current} 条卡片，导入会整份替换，继续？`)) {
+      return
+    }
+
+    recordStore.replace_document(document)
     reply.value = ''
     failed.value = false
-    message.value = `已加入 ${records.length} 张卡片`
+    message.value = `已载入「${document.title}」· ${document.records.length} 张`
   } catch (error) {
     failed.value = true
     message.value = error instanceof CardParseError ? error.message : '解析失败，检查一下格式'
@@ -76,7 +81,7 @@ function apply() {
         :disabled="!reply.trim()"
         @click="apply"
       >
-        加入当前文档
+        导入文档
       </button>
 
       <span v-if="message" class="text-[11.5px]" :class="failed ? 'text-[#a4472f]' : 'text-muted'">

@@ -5,7 +5,8 @@
 ### Added
 
 - AI page with two routes: MCP setup for Claude Code / Cursor / Claude Desktop / any SSE
-  client, and a copy-prompt flow that turns a chat reply back into cards
+  client, and a copy-prompt flow that turns a chat reply into a whole document
+  (title, deck type, footer and cards) and loads it in one step
 
 ### Fixed
 

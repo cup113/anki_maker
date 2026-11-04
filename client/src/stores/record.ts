@@ -250,9 +250,9 @@ export const useRecordStore = defineStore("record", () => {
         save_document();
     }
 
-    /** 追加 AI 解析出的卡片，并立即落盘——AI 页不经过首页的保存按钮 */
-    function append_records(records: ChunkRecord[]) {
-        chunkDocument.value.records.push(...records);
+    /** 用 AI 返回的整份文档替换当前文档，并立即落盘——AI 页不经过首页的保存按钮 */
+    function replace_document(doc: ChunkDocument) {
+        chunkDocument.value = doc;
         save_document();
     }
 
@@ -316,7 +316,7 @@ export const useRecordStore = defineStore("record", () => {
         import_document,
         delete_document,
         export_format,
-        append_records,
+        replace_document,
         new_document,
         loadDocumentFromDraft,
     };
