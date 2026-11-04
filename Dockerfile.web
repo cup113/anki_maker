@@ -1,4 +1,8 @@
-# 前端：SvelteKit + adapter-node，产物是 server/chunks + client 静态资源
+# 前端：SvelteKit + adapter-node，产物是 build/server（SSR）+ build/client（静态资源）
+#
+# adapter-node 只打包 @sveltejs/kit 自己的运行时，业务依赖仍按裸名 import：
+# 就是当天出错的那一行 —— ERR_MODULE_NOT_FOUND: Cannot find package 'dayjs'。
+# 所以运行镜像必须带一份 production 依赖树，光有 build/ 是跑不起来的。
 FROM node:22 AS builder
 WORKDIR /app
 RUN npm install -g pnpm@11.22.0
@@ -10,12 +14,28 @@ RUN pnpm install --frozen-lockfile
 COPY client ./client
 RUN pnpm --filter anki-maker-client run build
 
+# 一份干净的 production 依赖，vite / eslint / vitest 这些不进运行镜像
+FROM node:22 AS prod-deps
+WORKDIR /app
+RUN npm install -g pnpm@11.22.0
+
+COPY package.json pnpm-workspace.yaml pnpm-lock.yaml ./
+COPY client/package.json ./client/
+RUN pnpm install --frozen-lockfile --prod --ignore-scripts
+
 FROM node:22-slim AS runner
 WORKDIR /app
 ENV NODE_ENV=production
 ENV PORT=3000
 
-COPY --from=builder /app/client/build ./build
+# pnpm 的 isolated 布局：client/node_modules 里全是相对软链，
+# 指向 workspace 根的 .pnpm 虚拟仓库，两棵树必须一起搬、保持相对深度。
+COPY --from=prod-deps /app/node_modules ./node_modules
+COPY --from=prod-deps /app/client/package.json ./client/package.json
+COPY --from=prod-deps /app/client/node_modules ./client/node_modules
+COPY --from=builder /app/client/build ./client/build
 
+# 从 client/ 启动：Node 沿 build → client/node_modules → 根 .pnpm 找到依赖
+WORKDIR /app/client
 EXPOSE 3000
 CMD ["node", "build"]

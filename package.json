@@ -10,6 +10,7 @@
     "check": "pnpm --filter anki-maker-client check",
     "lint": "pnpm --filter anki-maker-client lint",
     "format": "pnpm --filter anki-maker-client format",
+    "format:check": "pnpm --filter anki-maker-client format:check",
     "test:unit": "pnpm --filter anki-maker-client test:unit"
   }
 }

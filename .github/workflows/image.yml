@@ -88,10 +88,34 @@ jobs:
           file: ./Dockerfile.web
           platforms: linux/amd64
           push: ${{ github.event_name != 'pull_request' }}
+          # 同时载入本机，下面的冒烟测试要真的把镜像跑起来
+          load: true
           tags: ${{ steps.web_meta.outputs.tags }}
           labels: ${{ steps.web_meta.outputs.labels }}
           cache-from: type=gha,scope=web
           cache-to: type=gha,mode=max,scope=web
+
+      # 2026-11-04 的 2.2.0 就是这样漏出去的：镜像能 build 能 push，
+      # 但容器一起就 500 —— build/ 里按裸名 import 的包不在运行镜像里。
+      - name: Smoke test the web image
+        run: |
+          set -uo pipefail
+          image=$(jq -r '.tags[0]' <<< '${{ steps.web_meta.outputs.json }}')
+          echo "starting $image"
+          docker run -d --name web-smoke -p 3000:3000 -e ORIGIN=http://127.0.0.1:3000 "$image"
+          trap 'docker rm -f web-smoke >/dev/null 2>&1' EXIT
+
+          for i in $(seq 1 30); do
+            if curl -fsS -o /dev/null http://127.0.0.1:3000/ 2>/dev/null; then
+              echo "GET / -> 200 after ${i}s"
+              exit 0
+            fi
+            sleep 1
+          done
+
+          echo "::error::container is up but GET / never returned 200"
+          docker logs web-smoke || true
+          exit 1
 
       - name: Summary
         run: |

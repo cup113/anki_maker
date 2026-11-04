@@ -1,5 +1,15 @@
 # Changelog
 
+## [2.2.1] - 2026-11-04
+
+### Fixed
+
+- The `anki_maker-web` image shipped `build/` without its runtime dependencies, so every page
+  answered 500 (`ERR_MODULE_NOT_FOUND: Cannot find package 'dayjs'`) and the compose
+  healthcheck never passed. The image now carries a production-only `node_modules`, and CI
+  starts the built image and requests `/` before pushing, so an image that cannot serve a page
+  fails the build instead of the deploy
+
 ## [2.2.0] - 2026-11-04
 
 ### Added

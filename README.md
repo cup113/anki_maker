@@ -55,7 +55,7 @@ docker compose up -d
 - `fastapi`：`ghcr.io/cup113/anki_maker:latest`，只在 compose 内部可达（`:4134`）
 
 镜像由 GitHub Actions 在每次推送到 `main`、以及每次推送 `v*` 标签时构建（`v*` 标签另打
-`2.2.0`、`2.2` 等版本号）。要从本地源码重建：
+`2.2.1`、`2.2` 等版本号）。要从本地源码重建：
 
 ```bash
 docker build -f Dockerfile.web -t ghcr.io/cup113/anki_maker-web:latest .

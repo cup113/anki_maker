@@ -1,6 +1,6 @@
 {
   "name": "anki-maker-client",
-  "version": "2.2.0",
+  "version": "2.2.1",
   "private": true,
   "license": "Apache-2.0",
   "type": "module",
@@ -12,6 +12,7 @@
     "check": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json",
     "lint": "eslint .",
     "format": "prettier --write .",
+    "format:check": "prettier --check .",
     "format:check": "prettier --check .",
     "test:unit": "vitest run"
   },
