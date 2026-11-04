@@ -59,7 +59,7 @@
     >
       <span>cup11 © 2025-2026</span>
       <span class="mx-1.5 text-rule-strong">·</span>
-      <a class="paper-link" href="https://github.com/cup113/anki-linguist">GitHub</a>
+      <a class="paper-link" href="https://github.com/cup113/anki_maker">GitHub</a>
     </footer>
   </div>
 
