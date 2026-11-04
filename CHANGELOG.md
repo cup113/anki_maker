@@ -1,15 +1,44 @@
 # Changelog
 
-## [Unreleased]
+## [2.2.0] - 2026-11-04
 
 ### Added
 
 - AI page with two routes: MCP setup for Claude Code / Cursor / Claude Desktop / any SSE
   client, and a copy-prompt flow that turns a chat reply into a whole document
   (title, deck type, footer and cards) and loads it in one step
+- `pnpm lint`, `pnpm format` and `pnpm format:check`: ESLint 9 (typescript-eslint +
+  eslint-plugin-svelte) and Prettier with the Svelte plugin
+
+### Changed
+
+- Client is now a SvelteKit app (Svelte 5 runes, file-system routing). The Node server
+  renders each page and forwards `/api` and `/mcp` to FastAPI, so the public port and every
+  browser-side URL stay the same
+- The repo is a pnpm workspace: `pnpm install`, `pnpm dev`, `pnpm build` and `pnpm check`
+  run from the root and target the `client` package
+- Deployment is two containers: `anki_maker-web` (port 4134) and `anki_maker` (internal
+  only); the release workflow builds and pushes both images
+- The tab icon and the header mark are the same vector bookmark now, replacing the
+  placeholder bar and the PNG icons
+- `LICENSE` carries the full Apache 2.0 text under a 2025-2026 copyright, and the README
+  links to it
+
+### Removed
+
+- FastAPI no longer serves the built front-end: its static routes and `client/dist` are gone,
+  and Tiptap's Vue binding along with the Vue toolchain (Vue, Pinia, Vue Router, Reka UI)
 
 ### Fixed
 
+- Export cache compares the document content (title, deck type, footer, cards and
+  additions) instead of the title alone, so editing a card and exporting again no longer
+  downloads the previous file
+- Reloading the page reopens the document being edited instead of starting a fresh one,
+  and opening a document from the list survives a refresh
+- The document list's ⋯ menu closes after 打开/删除
+- Native `alert`/`confirm`/`prompt` replaced with an in-page dialog: Esc cancels, Enter
+  confirms, and the prompt pre-fills the title on import
 - MCP tool now percent-encodes the dynamic part of its links, so a card set with a
   Chinese title no longer yields URLs containing raw CJK characters
 

@@ -2,7 +2,6 @@ import time
 from os import getenv
 from pathlib import Path
 from fastapi import FastAPI, HTTPException, Response
-from fastapi.responses import FileResponse
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from nanoid import generate
@@ -163,18 +162,3 @@ mcp_server = FastMCP(
 register_tools(mcp_server)
 app.mount("/mcp", mcp_server.sse_app())
 
-
-@app.get('/')
-async def serve_root():
-    return FileResponse('client/dist/index.html')
-
-
-@app.get('/{full_path:path}')
-async def serve_frontend(full_path: str):
-    if full_path.startswith(('api/', 'mcp/')):
-        raise HTTPException(404)
-    static_dir = Path('client/dist')
-    file_path = static_dir / full_path
-    if file_path.exists() and file_path.is_file():
-        return FileResponse(str(file_path))
-    return FileResponse(str(static_dir / 'index.html'))

@@ -5,4 +5,9 @@ AL_*.json
 .vscode
 temp
 .pnpm-store
+.venv
 .clarity
+.playwright-mcp
+node_modules
+client/build
+client/.svelte-kit

@@ -1,32 +1,9 @@
-import { fileURLToPath, URL } from 'node:url'
-
+import tailwindcss from '@tailwindcss/vite'
+import { sveltekit } from '@sveltejs/kit/vite'
 import { defineConfig } from 'vite'
-import vue from '@vitejs/plugin-vue'
-import vueDevTools from 'vite-plugin-vue-devtools'
-import tailwindcss from '@tailwindcss/vite';
 
-// https://vite.dev/config/
 export default defineConfig({
-  plugins: [
-    vue(),
-    vueDevTools(),
-    tailwindcss(),
-  ],
-  resolve: {
-    alias: {
-      '@': fileURLToPath(new URL('./src', import.meta.url))
-    },
-  },
-  build: {
-    rollupOptions: {
-      output: {
-        manualChunks: {
-          'vue': ['vue', 'pinia', 'vue-router'],
-          'tiptap': ['@tiptap/vue-3', '@tiptap/starter-kit', '@tiptap/extension-subscript']
-        }
-      }
-    }
-  },
+  plugins: [tailwindcss(), sveltekit()],
   server: {
     port: 4133,
     proxy: {
@@ -37,7 +14,7 @@ export default defineConfig({
       '/mcp': {
         target: 'http://localhost:4134',
         changeOrigin: true,
-      }
-    }
-  }
+      },
+    },
+  },
 })

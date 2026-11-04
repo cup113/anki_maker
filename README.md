@@ -21,14 +21,14 @@ Anki Maker 是一个用于创建 Anki 卡片的现代化工具。它允许用户
 
 ## 技术架构
 
-Anki Maker 采用前后端分离的架构：
+前后端分离，部署时是两个容器：页面由 SvelteKit 的 Node 服务渲染，`/api` 与 `/mcp` 由它转发给 FastAPI。
 
-- 前端：基于 Vue 3 + TypeScript（严格模式）构建，使用 Vite 作为构建工具
-  - 状态管理：Pinia
-  - 路由：Vue Router
-  - 富文本编辑器：Tiptap
-  - UI 组件：Reka UI
+- 前端：SvelteKit 2 + Svelte 5（runes）+ TypeScript
+  - 路由：文件系统路由（`src/routes`），页面的首屏由服务端渲染
+  - 状态：`$state` 直接管理文档，数据读写浏览器 localStorage
+  - 富文本编辑器：Tiptap（`@tiptap/core`，Svelte 侧自己接编辑器实例）
   - 样式：Tailwind CSS 4
+  - 构建：`@sveltejs/adapter-node`，产物是一个 Node 服务
 - 后端：基于 FastAPI 构建的 Python 服务
   - 文档处理：python-docx + 自定义 HTML 解析器生成 Word 文档
   - Anki 包生成：genanki 库生成 .apkg 文件
@@ -49,26 +49,44 @@ docker compose up -d
 # 打开浏览器访问 http://localhost:4134
 ```
 
-镜像 `ghcr.io/cup113/anki_maker:latest` 由 GitHub Actions 在每次推送到 `main`、以及每次推送
-`v*` 标签时构建（`v*` 标签另打 `2.1.0`、`2.1` 等版本号）。要从本地源码重建：
+`docker compose` 起两个服务：
+
+- `web`：`ghcr.io/cup113/anki_maker-web:latest`，SvelteKit 的 Node 服务，公网端口 4134
+- `fastapi`：`ghcr.io/cup113/anki_maker:latest`，只在 compose 内部可达（`:4134`）
+
+镜像由 GitHub Actions 在每次推送到 `main`、以及每次推送 `v*` 标签时构建（`v*` 标签另打
+`2.2.0`、`2.2` 等版本号）。要从本地源码重建：
 
 ```bash
+docker build -f Dockerfile.web -t ghcr.io/cup113/anki_maker-web:latest .
 docker build -f Dockerfile.fastapi -t ghcr.io/cup113/anki_maker:latest .
 docker compose up -d
 ```
 
+页面容器有两个环境变量，换域名时改它们：
+
+| 变量 | 默认值 | 作用 |
+| --- | --- | --- |
+| `ORIGIN` | `http://localhost:4134` | SvelteKit 生成绝对地址用的站点源 |
+| `API_INTERNAL_URL` | `http://fastapi:4134` | `/api`、`/mcp` 转发到的后端地址 |
+
 ### 开发环境
+
+仓库是 pnpm workspace，依赖装一次就够（在仓库根目录）：
+
+```bash
+pnpm install
+```
 
 #### 前端开发
 
 ```bash
-cd client
-
-# 安装依赖
-pnpm install
-
-# 启动开发服务器
-pnpm dev
+pnpm dev          # http://localhost:4133，/api 与 /mcp 代理到 4134
+pnpm check        # svelte-check：类型与无障碍检查
+pnpm lint         # ESLint（TypeScript + Svelte）
+pnpm format       # Prettier 写入；format:check 只检查
+pnpm test:unit    # vitest
+pnpm build        # 产出 client/build（Node 服务）
 ```
 
 #### 后端开发
@@ -80,7 +98,7 @@ cd server
 pip install -r requirements.txt
 
 # 启动服务
-python main.py
+uvicorn server.main:app --port 4134 --reload
 ```
 
 ## 使用说明
@@ -99,16 +117,21 @@ python main.py
 
 ```
 anki_maker/
-├── client/                 # 前端 Vue 应用
+├── package.json            # pnpm workspace 根，脚本转发到 client
+├── pnpm-workspace.yaml     # 工作区与构建脚本许可（allowBuilds）
+├── client/                 # 前端 SvelteKit 应用
 │   ├── src/
-│   │   ├── assets/         # 样式文件
-│   │   ├── components/     # Vue 组件（PascalCase 命名）
-│   │   ├── router/         # 路由配置
-│   │   ├── services/       # 外部服务
-│   │   ├── stores/         # Pinia 状态管理
-│   │   └── views/          # 页面视图
-│   ├── package.json
-│   └── pnpm-workspace.yaml # 依赖与构建脚本许可（allowBuilds）
+│   │   ├── routes/         # 页面与布局（+page.svelte / +layout.svelte）
+│   │   ├── lib/
+│   │   │   ├── components/ # Svelte 组件（PascalCase 命名）
+│   │   │   ├── stores/     # runes 状态（record.svelte.ts / toasts.svelte.ts）
+│   │   │   ├── ai/         # 提示词与 AI 回复解析
+│   │   │   └── model.ts    # 文档模型与各版本 JSON 兼容层
+│   │   ├── hooks.server.ts # /api、/mcp 转发给 FastAPI
+│   │   ├── app.html
+│   │   └── app.css
+│   ├── static/             # 图标、robots.txt
+│   └── svelte.config.js
 ├── server/                 # 后端 FastAPI 服务
 │   ├── main.py             # API 入口和路由
 │   ├── data_models.py      # Pydantic 数据模型
@@ -119,10 +142,15 @@ anki_maker/
 │   ├── mcp_tools.py        # MCP 服务器和工具
 │   └── tool_inputs.py      # MCP 工具输入模型
 ├── .github/workflows/
-│   └── image.yml           # 镜像构建并发布到 ghcr.io
+│   └── image.yml           # 两个镜像的构建与发布
 ├── docker-compose.yml      # Docker 部署配置（拉取已发布的镜像）
-└── Dockerfile.fastapi      # FastAPI Docker 配置
+├── Dockerfile.fastapi      # API 镜像
+└── Dockerfile.web          # 页面镜像（Node）
 ```
+
+## License
+
+Apache License 2.0，版权归 2025-2026 Jason Li。完整条文见 [LICENSE](LICENSE)。
 
 ## 贡献
 

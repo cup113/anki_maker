@@ -1,0 +1,21 @@
+# 前端：SvelteKit + adapter-node，产物是 server/chunks + client 静态资源
+FROM node:22 AS builder
+WORKDIR /app
+RUN npm install -g pnpm@11.22.0
+
+COPY package.json pnpm-workspace.yaml pnpm-lock.yaml ./
+COPY client/package.json ./client/
+RUN pnpm install --frozen-lockfile
+
+COPY client ./client
+RUN pnpm --filter anki-maker-client run build
+
+FROM node:22-slim AS runner
+WORKDIR /app
+ENV NODE_ENV=production
+ENV PORT=3000
+
+COPY --from=builder /app/client/build ./build
+
+EXPOSE 3000
+CMD ["node", "build"]

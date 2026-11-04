@@ -1,0 +1,15 @@
+{
+  "name": "anki-maker",
+  "private": true,
+  "license": "Apache-2.0",
+  "type": "module",
+  "packageManager": "pnpm@11.22.0",
+  "scripts": {
+    "dev": "pnpm --filter anki-maker-client dev",
+    "build": "pnpm --filter anki-maker-client build",
+    "check": "pnpm --filter anki-maker-client check",
+    "lint": "pnpm --filter anki-maker-client lint",
+    "format": "pnpm --filter anki-maker-client format",
+    "test:unit": "pnpm --filter anki-maker-client test:unit"
+  }
+}

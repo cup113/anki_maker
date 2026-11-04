@@ -3,10 +3,13 @@
 .vscode
 .pnpm-store
 temp
+.clarity
+.playwright-mcp
 
 # 依赖与构建产物：镜像内自己装、自己构建
 **/node_modules
-client/dist
+client/build
+client/.svelte-kit
 client/coverage
 
 # Python 运行时垃圾

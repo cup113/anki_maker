@@ -1,0 +1,11 @@
+<svg
+  xmlns="http://www.w3.org/2000/svg"
+  viewBox="0 0 32 32"
+  role="img"
+  aria-label="Anki Linguist"
+>
+  <path
+    fill="#2d2a26"
+    d="M8 3h16a4 4 0 0 1 4 4v22l-12-7-12 7V7a4 4 0 0 1 4-4Z"
+  />
+</svg>

@@ -9,13 +9,10 @@ lerna-debug.log*
 
 node_modules
 .DS_Store
-dist
-dist-ssr
+build
+.svelte-kit
 coverage
 *.local
-
-/cypress/videos/
-/cypress/screenshots/
 
 # Editor directories and files
 .vscode/*
@@ -28,6 +25,3 @@ coverage
 *.sw?
 
 *.tsbuildinfo
-
-# Local Netlify folder
-.netlify

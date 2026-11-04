@@ -1,12 +1,38 @@
 # docker-compose.yml
 
 services:
+  web:
+    # SvelteKit 的 Node 服务：SSR 出页面，/api 与 /mcp 转发给 fastapi。
+    # 公网入口仍然是 4134，容器内部听 3000，所以域名和端口都不用改。
+    image: ghcr.io/cup113/anki_maker-web:latest
+    ports:
+      - "4134:3000"
+    restart: always
+    environment:
+      - ORIGIN=${PUBLIC_ORIGIN:-http://localhost:4134}
+      - API_INTERNAL_URL=http://fastapi:4134
+    depends_on:
+      fastapi:
+        condition: service_healthy
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "node",
+          "-e",
+          "fetch('http://127.0.0.1:3000/').then(r => process.exit(r.ok ? 0 : 1)).catch(() => process.exit(1))",
+        ]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 20s
+
   fastapi:
     # 镜像由 .github/workflows/image.yml 构建并推到 ghcr.io，本地不再 build。
     # 要从源码重建：docker build -f Dockerfile.fastapi -t ghcr.io/cup113/anki_maker:latest .
     image: ghcr.io/cup113/anki_maker:latest
-    ports:
-      - "4134:4134"
+    expose:
+      - "4134"
     restart: always
     environment:
       - APP_ENV=production
