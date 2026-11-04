@@ -1,8 +1,15 @@
-# Anki Maker
+# Anki Linguist
+
+[![在线试用](https://img.shields.io/badge/%E5%9C%A8%E7%BA%BF%E8%AF%95%E7%94%A8-anki.cup11.top-2d2a26?style=flat-square)](https://anki.cup11.top)
+[![build](https://img.shields.io/github/actions/workflow/status/cup113/anki_maker/image.yml?branch=main&style=flat-square&label=build)](https://github.com/cup113/anki_maker/actions/workflows/image.yml)
+[![license](https://img.shields.io/badge/license-Apache--2.0-4b0?style=flat-square)](LICENSE)
+[![ghcr.io](https://img.shields.io/badge/ghcr.io-anki__maker--web-2496ED?style=flat-square&logo=docker&logoColor=white)](https://github.com/cup113/anki_maker/pkgs/container/anki_maker-web)
+
+![编辑器：左栏写提示，右栏写答案，附注排在词条下面](docs/screenshots/editor.png)
 
 ## 简介
 
-Anki Maker 是一个用于创建 Anki 卡片的现代化工具。它允许用户通过直观的 Web 界面创建、编辑和导出 Anki 卡组，支持导出为多种格式，包括 Anki 卡组文件 (.apkg)、Word 文档 (.docx) 和 JSON 数据文件。
+Anki Linguist（仓库与镜像名仍是 `anki_maker`）是一个用于创建 Anki 卡片的现代化工具。它允许用户通过直观的 Web 界面创建、编辑和导出 Anki 卡组，支持导出为多种格式，包括 Anki 卡组文件 (.apkg)、Word 文档 (.docx) 和 JSON 数据文件。
 
 ## 功能特性
 
@@ -18,6 +25,18 @@ Anki Maker 是一个用于创建 Anki 卡片的现代化工具。它允许用户
 - MCP（Model Context Protocol）服务器，支持 AI 集成
 - 本地存储支持，数据保存在浏览器中
 - 响应式设计，支持在不同设备上使用
+
+## 截图
+
+<p align="center">
+  <img src="docs/screenshots/files.png" width="400" alt="文档库：保存过的文档，按修改时间排列">
+  <img src="docs/screenshots/ai.png" width="400" alt="AI 接入：把 MCP 地址交给 Claude Code、Cursor 或 Claude Desktop">
+</p>
+
+<p align="center">
+  <img src="docs/screenshots/export.png" width="460" alt="导出：一个按钮切换 JSON、Word、APKG">
+  <img src="docs/screenshots/mobile.png" width="220" alt="同一份文档在手机上">
+</p>
 
 ## 技术架构
 
@@ -40,7 +59,7 @@ Anki Maker 是一个用于创建 Anki 卡片的现代化工具。它允许用户
 ### 使用 Docker（推荐）
 
 ```bash
-git clone <repository-url>
+git clone https://github.com/cup113/anki_maker.git
 cd anki_maker
 
 docker compose pull
@@ -141,6 +160,7 @@ anki_maker/
 │   ├── html_parser.py      # HTML 转 Word 解析器
 │   ├── mcp_tools.py        # MCP 服务器和工具
 │   └── tool_inputs.py      # MCP 工具输入模型
+├── docs/screenshots/       # README 里的截图
 ├── .github/workflows/
 │   └── image.yml           # 两个镜像的构建与发布
 ├── docker-compose.yml      # Docker 部署配置（拉取已发布的镜像）
@@ -150,7 +170,7 @@ anki_maker/
 
 ## License
 
-Apache License 2.0，版权归 2025-2026 Jason Li。完整条文见 [LICENSE](LICENSE)。
+Apache License 2.0，版权归 2025-2026 Jason Li。完整条文见 [LICENSE](LICENSE)，版权声明见 [NOTICE](NOTICE)。
 
 ## 贡献
 
