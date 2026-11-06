@@ -1,19 +1,14 @@
-import time
-from os import getenv
-from pathlib import Path
 from fastapi import FastAPI, HTTPException, Response
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
-from nanoid import generate
 
 from mcp.server.transport_security import TransportSecuritySettings
+from mcp.server.fastmcp import FastMCP
 
 from server.data_models import ChunkDocument
-from server.anki_utils import gen_anki
-from server.document_utils import create_document, generate_tables, generate_footer
-from server.draft_store import save_draft, get_draft
+from server.draft_store import get_draft, save_draft
+from server.export import locate, produce
 from server.mcp_tools import register_tools
-from mcp.server.fastmcp import FastMCP
 
 app = FastAPI(
     title="Anki Maker API",
@@ -37,17 +32,10 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-
-PRODUCTION = getenv("APP_ENV") == "production"
-
-
-def cleanup_old_files(max_age_hours: int = 24):
-    output_dir = Path("/app/output") if PRODUCTION else Path("./temp")
-    cutoff = time.time() - max_age_hours * 3600
-    for pattern in ("*.docx", "*.apkg"):
-        for f in output_dir.glob(pattern):
-            if f.stat().st_mtime < cutoff:
-                f.unlink(missing_ok=True)
+MEDIA_TYPES = {
+    "docx": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+    "apkg": "application/octet-stream",
+}
 
 
 class DocumentResponse(BaseModel):
@@ -63,39 +51,16 @@ class DocumentResponse(BaseModel):
     description="根据提供的内容生成Word文档(.docx)和Anki卡组(.apkg)文件",
 )
 async def generate_documents(request: ChunkDocument):
-    cleanup_old_files()
-    output_dir = Path("/app/output") if PRODUCTION else Path("./temp")
-    file_id = generate()
-
     try:
-        document = request
-        doc = create_document(document)
-        generate_tables(doc, document.records)
-        generate_footer(doc, document.footer)
-
-        docx_file_path = output_dir / f"{file_id}.docx"
-        doc.save(str(docx_file_path))
-
-        apkg_file_path = output_dir / f"{file_id}.apkg"
-        gen_anki(
-            document.records,
-            document.deckType,
-            apkg_file_path,
-        )
-
-        final_docx_path = Path(output_dir) / f"{file_id}.docx"
-        final_apkg_path = Path(output_dir) / f"{file_id}.apkg"
-
-        docx_file_path.rename(final_docx_path)
-        apkg_file_path.rename(final_apkg_path)
-
-        return DocumentResponse(
-            message="Documents generated successfully",
-            docx_filename=f"{file_id}.docx",
-            apkg_filename=f"{file_id}.apkg",
-        )
+        artifacts = produce(request)
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+    return DocumentResponse(
+        message="Documents generated successfully",
+        docx_filename=artifacts.docx,
+        apkg_filename=artifacts.apkg,
+    )
 
 
 @app.get(
@@ -104,24 +69,16 @@ async def generate_documents(request: ChunkDocument):
     description="下载之前生成的.docx或.apkg文件",
 )
 async def download_file(file_type: str, filename: str):
-    if file_type not in ["docx", "apkg"]:
+    if file_type not in MEDIA_TYPES:
         raise HTTPException(status_code=400, detail="Invalid file type")
 
-    file_path = Path("/app/output" if PRODUCTION else "./temp") / filename
-
-    if not file_path.exists():
+    file_path = locate(filename)
+    if file_path is None:
         raise HTTPException(status_code=404, detail="File not found")
 
-    media_types = {
-        "docx": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-        "apkg": "application/octet-stream",
-    }
-
-    content = file_path.read_bytes()
-
     return Response(
-        content=content,
-        media_type=media_types[file_type],
+        content=file_path.read_bytes(),
+        media_type=MEDIA_TYPES[file_type],
         headers={"Content-Disposition": "attachment"},
     )
 
@@ -161,4 +118,3 @@ mcp_server = FastMCP(
 )
 register_tools(mcp_server)
 app.mount("/mcp", mcp_server.sse_app())
-

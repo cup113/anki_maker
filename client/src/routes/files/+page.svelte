@@ -2,36 +2,21 @@
   import dayjs from 'dayjs'
 
   import FileRow from '$lib/components/FileRow.svelte'
+  import type { DocumentSummary } from '$lib/storage'
   import { dialogs } from '$lib/stores/dialogs.svelte'
   import { record_store } from '$lib/stores/record.svelte'
   import { toasts } from '$lib/stores/toasts.svelte'
 
-  interface StoredDocument {
-    records?: unknown[]
-    createdAt?: string
-    modifiedAt?: string
+  const items = $derived(record_store.summaries)
+
+  function load_document(item: DocumentSummary) {
+    record_store.load_document(item.id)
+    toasts.add_toast('文档加载成功', `(${dayjs().format('HH:mm:ss')}) ${item.title}`)
   }
 
-  const items = $derived(
-    record_store.titles.map((title) => {
-      const stored = record_store.read_document(title) as StoredDocument | null
-      return {
-        title,
-        amount: stored?.records?.length ?? 0,
-        createdAt: stored?.createdAt ?? '',
-        modifiedAt: stored?.modifiedAt ?? '',
-      }
-    }),
-  )
-
-  function load_document(title: string) {
-    record_store.load_document(title)
-    toasts.add_toast('文档加载成功', `(${dayjs().format('HH:mm:ss')}) ${title}`)
-  }
-
-  async function delete_document(title: string) {
-    if (await dialogs.confirm(`确定删除「${title}」？`, '删除')) {
-      record_store.delete_document(title)
+  async function delete_document(item: DocumentSummary) {
+    if (await dialogs.confirm(`确定删除「${item.title}」？`, '删除')) {
+      record_store.delete_document(item.id)
     }
   }
 
@@ -76,14 +61,14 @@
     </thead>
 
     <tbody>
-      {#each items as item (item.title)}
+      {#each items as item (item.id)}
         <FileRow
           title={item.title}
           amount={item.amount}
           created={item.createdAt}
           modified={item.modifiedAt}
-          onopen={() => load_document(item.title)}
-          ondelete={() => delete_document(item.title)}
+          onopen={() => load_document(item)}
+          ondelete={() => delete_document(item)}
         />
       {/each}
     </tbody>

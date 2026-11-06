@@ -1,30 +1,14 @@
 import { browser } from '$app/environment'
-import { encode as encode_base64 } from 'js-base64'
 import dayjs from 'dayjs'
 import { nanoid } from 'nanoid'
 
 import * as model from '../model'
+import * as storage from '../storage'
 import { dialogs } from './dialogs.svelte'
 import { toasts } from './toasts.svelte'
 
-const DOCUMENT_KEY = 'AL_chunkDocument'
-const TITLES_KEY = 'AL_recordStorageIds'
-
 /** 首屏（含 SSR）用一个空文档占位，挂载后才换成 localStorage 里的那一份。 */
 const EMPTY = model.create_document('', [])
-
-function storage_key(title: string): string {
-  return `AL_records_${encode_base64(title)}`
-}
-
-function parse(raw: string | null): unknown {
-  if (raw === null) return null
-  try {
-    return JSON.parse(raw)
-  } catch {
-    return null
-  }
-}
 
 function download_blob(blob: Blob, filename: string): void {
   const url = URL.createObjectURL(blob)
@@ -35,9 +19,13 @@ function download_blob(blob: Blob, filename: string): void {
   setTimeout(() => URL.revokeObjectURL(url), 1000)
 }
 
+/**
+ * 当前正在编辑的那份 Document，以及文档库的摘要列表。
+ * 存档怎么放（键名、索引、旧版迁移）都归 lib/storage 管，这里只做文档操作和编排。
+ */
 class RecordStore {
   #document = $state<model.ChunkDocument | null>(null)
-  titles = $state<string[]>([])
+  summaries = $state<storage.DocumentSummary[]>([])
   #ready = $state(false)
 
   get doc(): model.ChunkDocument {
@@ -52,88 +40,88 @@ class RecordStore {
   init(): void {
     if (!browser || this.#ready) return
 
-    const titles = parse(localStorage.getItem(TITLES_KEY))
-    if (Array.isArray(titles)) {
-      this.titles = titles.filter((title): title is string => typeof title === 'string')
-    }
+    storage.migrate()
+    this.#refresh()
 
-    // AL_chunkDocument 是「上一次关页面时正在编辑的那份」，存了就直接恢复，
+    // `AL_document` 是「上一次关页面时正在编辑的那份」，存了就直接恢复，
     // 刷新回到原来的文档，而不是又开一份 "New xxxxxxxx"。
-    const stored = parse(localStorage.getItem(DOCUMENT_KEY))
-    this.#document =
-      stored === null ? model.create_document(`New ${nanoid(8)}`, []) : model.from_json(stored)
+    this.#document = storage.read_working() ?? model.create_document(`New ${nanoid(8)}`, [])
     this.#ready = true
   }
 
-  /** 把当前这份记成「工作文档」，只回答刷新后打开哪一份，不写存档列表。 */
-  #persist_working(): void {
-    if (!browser || this.#document === null) return
-    localStorage.setItem(DOCUMENT_KEY, JSON.stringify(this.#document))
+  #refresh(): void {
+    this.summaries = storage.list()
   }
 
   save_document(): void {
-    if (!browser) return
+    // 还没 init（或者 SSR）时没有真文档，别把占位的空文档写进库里。
+    if (!browser || this.#document === null) return
 
-    if (!this.titles.includes(this.doc.title)) {
-      this.titles.push(this.doc.title)
-      localStorage.setItem(TITLES_KEY, JSON.stringify(this.titles))
-    }
-    this.doc.modifiedAt = model.now()
-    localStorage.setItem(storage_key(this.doc.title), JSON.stringify(this.doc))
-    this.#persist_working()
-    toasts.add_toast('文档已保存', `(${dayjs().format('HH:mm:ss')}) ${this.doc.title}`)
+    this.#document.modifiedAt = model.now()
+    storage.write(this.#document)
+    storage.write_working(this.#document)
+    this.#refresh()
+    toasts.add_toast('文档已保存', `(${dayjs().format('HH:mm:ss')}) ${this.#document.title}`)
   }
 
-  read_document(title: string): unknown | null {
-    if (!browser) return null
-    return parse(localStorage.getItem(storage_key(title)))
-  }
-
-  load_document(title: string, interactive = true): void {
-    const stored = this.read_document(title)
-    if (stored === null) {
+  load_document(id: string, interactive = true): void {
+    const document = storage.read(id)
+    if (document === null) {
       if (interactive) void dialogs.alert('找不到这份文档，可能已被删除。')
       return
     }
-    const document = model.from_json(stored)
-    document.title = title
     this.#document = document
-    this.#persist_working()
+    storage.write_working(document)
   }
 
   async import_document(json_string: string): Promise<void> {
     const imported = model.from_json(JSON.parse(json_string))
     const answer = await dialogs.prompt('导入为新文档，给它起个名字：', imported.title)
     imported.title = answer?.trim() || imported.title
+    // 导入是「新开一份」：沿用文件里的 id 会覆盖掉同 id 的那份存档。
+    imported.id = nanoid()
     this.#document = imported
     this.save_document()
   }
 
-  delete_document(title: string): void {
+  delete_document(id: string): void {
     if (!browser) return
-    localStorage.removeItem(storage_key(title))
-    const index = this.titles.indexOf(title)
-    if (index !== -1) {
-      this.titles.splice(index, 1)
-      localStorage.setItem(TITLES_KEY, JSON.stringify(this.titles))
+
+    storage.remove(id)
+
+    // 删掉的正好是手上这份：换一份新的。否则它会留在编辑器里，
+    // 下一次保存（新建、AI 替换都会先保存）又把它写回库里。
+    if (this.#document?.id === id) {
+      this.#document = model.create_document(`New ${nanoid(8)}`, [])
+      storage.write_working(this.#document)
     }
+
+    this.#refresh()
   }
 
+  /**
+   * 打开 MCP 给的草稿。它是从外面进来的一份新文档，不该顶掉手上这份的身份：
+   * 旧代码按标题覆盖同名存档，那是静默丢数据；这里宁可多一行。
+   */
   load_draft(document: model.ChunkDocument): void {
     this.#document = document
     this.save_document()
   }
 
-  /** 用 AI 返回的整份文档替换当前文档，并立即落盘——AI 页不经过首页的保存按钮 */
+  /**
+   * 用 AI 返回的内容整份替换当前文档，并立即落盘——AI 页不经过首页的保存按钮。
+   * 身份必须沿用（见 model.replace_content）：换了 id 就不是替换，而是新开一份，
+   * 库里会多出一行同名文档，跟「导入会整份替换」这句提示对不上。
+   */
   replace_document(document: model.ChunkDocument): void {
-    this.#document = document
+    this.#document = model.replace_content(this.doc, document)
     this.save_document()
   }
 
   new_document(): void {
     this.save_document()
     this.#document = model.create_document(`New ${nanoid(8)}`, [])
-    this.#persist_working()
+    storage.write_working(this.doc)
   }
 
   // 服务端一次 /api/generate 就同时产出 docx 与 apkg，缓存这次结果，

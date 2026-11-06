@@ -7,6 +7,8 @@ RUN pip install --no-cache-dir -r requirements.txt
 COPY server ./server
 
 RUN mkdir -p /app/output
+# 单独跑这个镜像（不经 compose）也要写进 /app/output，否则默认的 ./temp 会落在容器层里。
+ENV OUTPUT_DIR=/app/output
 
 EXPOSE 4134
 CMD ["uvicorn", "server.main:app", "--host", "0.0.0.0", "--port", "4134"]

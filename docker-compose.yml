@@ -35,7 +35,8 @@ services:
       - "4134"
     restart: always
     environment:
-      - APP_ENV=production
+      # 生成的文件落在挂载的卷里；不设的话容器会写到 ./temp，重启即丢。
+      - OUTPUT_DIR=/app/output
       - API_BASE_URL=${API_BASE_URL:-http://localhost:4134} # editable in Coolify UI
     volumes:
       - generated_files:/app/output

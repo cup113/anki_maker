@@ -1,12 +1,4 @@
-import { nanoid } from 'nanoid'
-
-import {
-  create_document,
-  type Addition,
-  type ChunkDocument,
-  type ChunkRecord,
-  type DeckType,
-} from '../model'
+import { from_json, type ChunkDocument } from '../model'
 
 /**
  * 给任何 AI 用的一段话。它必须自己说清楚要什么：没有 MCP 的窗口里，
@@ -39,19 +31,7 @@ JSON 的形状如下，字段名照抄：
 
 第一个字符是 {，最后一个字符是 }，中间不要有别的东西。`
 
-type RawDocument = {
-  title?: unknown
-  deckType?: unknown
-  footer?: unknown
-  records?: unknown
-}
-
-type RawCard = {
-  level?: unknown
-  front?: unknown
-  back?: unknown
-  additions?: unknown
-}
+type RawDocument = { records?: unknown }
 
 export class CardParseError extends Error {
   constructor(message: string) {
@@ -87,53 +67,9 @@ function read_json(source: string): unknown {
   throw new CardParseError('不是合法的 JSON')
 }
 
-function as_text(value: unknown): string {
-  if (typeof value === 'string') return value
-  if (typeof value === 'number') return String(value)
-  return ''
-}
-
-function as_deck_type(value: unknown): DeckType {
-  return value === 'two-sides' || value === 'type' ? value : 'one-side'
-}
-
-function to_addition(raw: unknown): Addition {
-  const item = (raw ?? {}) as { icon?: unknown; front?: unknown; back?: unknown }
-  return {
-    id: nanoid(),
-    icon: as_text(item.icon) || '→',
-    front: as_text(item.front),
-    back: as_text(item.back),
-  }
-}
-
-function to_record(raw: unknown): ChunkRecord {
-  const card = (raw ?? {}) as RawCard
-  const additions = Array.isArray(card.additions) ? card.additions.map(to_addition) : []
-  return {
-    id: nanoid(),
-    level: as_text(card.level) || '-',
-    front: as_text(card.front),
-    back: as_text(card.back),
-    additions,
-  }
-}
-
-function build_document(raw: RawDocument, list: unknown[]): ChunkDocument {
-  const records = list.map(to_record).filter((record) => record.front.trim() || record.back.trim())
-  if (records.length === 0) {
-    throw new CardParseError('没有可用的卡片')
-  }
-
-  const document = create_document(as_text(raw.title).trim() || '未命名文档', records)
-  document.deckType = as_deck_type(raw.deckType)
-  document.footer = as_text(raw.footer)
-  return document
-}
-
 /**
- * 回复应当是一整份文档；裸数组和 `{"records": …}` 仍然收下，
- * 少掉的 title / deckType / footer 用默认值补齐。
+ * AI 回复 → Document。解码交给 model.from_json，这里只留下 AI 这一条路才有的规矩：
+ * 模型爱拿空卡片凑数，所以空的正反面都算噪音；没给标题就先用一个占位名。
  */
 export function parse_reply(text: string): ChunkDocument {
   if (!text.trim()) {
@@ -141,17 +77,23 @@ export function parse_reply(text: string): ChunkDocument {
   }
 
   const data = read_json(strip_fence(text).trim())
-  if (Array.isArray(data)) {
-    return build_document({}, data)
-  }
-  if (data === null || typeof data !== 'object') {
-    throw new CardParseError('不是合法的 JSON')
-  }
-
-  const raw = data as RawDocument
-  if (!Array.isArray(raw.records)) {
-    throw new CardParseError('没有找到 records 数组')
+  if (!Array.isArray(data)) {
+    if (data === null || typeof data !== 'object') {
+      throw new CardParseError('不是合法的 JSON')
+    }
+    if (!Array.isArray((data as RawDocument).records)) {
+      throw new CardParseError('没有找到 records 数组')
+    }
   }
 
-  return build_document(raw, raw.records)
+  const document = from_json(data)
+  document.records = document.records.filter((record) => record.front.trim() || record.back.trim())
+  if (document.records.length === 0) {
+    throw new CardParseError('没有可用的卡片')
+  }
+  if (!document.title.trim()) {
+    document.title = '未命名文档'
+  }
+
+  return document
 }
