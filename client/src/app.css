@@ -27,6 +27,13 @@
     font-family: var(--font-sans);
   }
 
+  /* 原生 <dialog> 的居中本来就靠 UA 样式表的 `margin: auto`，配 `position: fixed;
+     inset: 0`。preflight 的 `* { margin: 0 }` 把它一起清了，弹窗于是贴在视口左上角。
+     元素选择器的特异性高于 `*`，所以这条能把居中还原。 */
+  dialog {
+    margin: auto;
+  }
+
   ::selection {
     background-color: #e6e0d3;
   }
