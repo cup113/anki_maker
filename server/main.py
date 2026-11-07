@@ -13,7 +13,7 @@ from server.mcp_tools import register_tools
 app = FastAPI(
     title="Anki Maker API",
     description="一个将文本内容转换为Anki卡片和Word文档的API服务",
-    version="1.0.1",
+    version="2.3.0",
     contact={
         "name": "API Support",
         "url": "https://github.com/cup113/anki_maker",

@@ -74,7 +74,7 @@ docker compose up -d
 - `fastapi`：`ghcr.io/cup113/anki_maker:latest`，只在 compose 内部可达（`:4134`）
 
 镜像由 GitHub Actions 在每次推送到 `main`、以及每次推送 `v*` 标签时构建（`v*` 标签另打
-`2.2.1`、`2.2` 等版本号）。要从本地源码重建：
+`2.3.0`、`2.3` 等版本号）。要从本地源码重建：
 
 ```bash
 docker build -f Dockerfile.web -t ghcr.io/cup113/anki_maker-web:latest .
@@ -88,6 +88,9 @@ docker compose up -d
 | --- | --- | --- |
 | `ORIGIN` | `http://localhost:4134` | SvelteKit 生成绝对地址用的站点源 |
 | `API_INTERNAL_URL` | `http://fastapi:4134` | `/api`、`/mcp` 转发到的后端地址 |
+
+后端容器只有 `OUTPUT_DIR` 一个：生成的文件落在哪里。镜像里是 `/app/output`（对应 compose
+挂的 `generated_files` 卷），不设时回落到 `./temp`。
 
 ### 开发环境
 
@@ -145,7 +148,8 @@ anki_maker/
 │   │   │   ├── components/ # Svelte 组件（PascalCase 命名）
 │   │   │   ├── stores/     # runes 状态（record.svelte.ts / toasts.svelte.ts）
 │   │   │   ├── ai/         # 提示词与 AI 回复解析
-│   │   │   └── model.ts    # 文档模型与各版本 JSON 兼容层
+│   │   │   ├── model.ts    # 文档模型、唯一解码入口（from_json）与文档身份
+│   │   │   └── storage.ts  # 文档库：存档键、索引、旧版本迁移
 │   │   ├── hooks.server.ts # /api、/mcp 转发给 FastAPI
 │   │   ├── app.html
 │   │   └── app.css
@@ -153,6 +157,7 @@ anki_maker/
 │   └── svelte.config.js
 ├── server/                 # 后端 FastAPI 服务
 │   ├── main.py             # API 入口和路由
+│   ├── export.py           # 导出：输出目录、命名、清理、下载查找
 │   ├── data_models.py      # Pydantic 数据模型
 │   ├── anki_utils.py       # Anki 卡组生成
 │   ├── document_utils.py   # Word 文档生成

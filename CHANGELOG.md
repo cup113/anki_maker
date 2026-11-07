@@ -1,5 +1,37 @@
 # Changelog
 
+## [2.3.0] - 2026-11-07
+
+### Changed
+
+- Saved documents are identified by an id instead of their title. Existing browser storage is
+  migrated on the first load of this version: every saved document is carried over and the old
+  title-keyed entries are deleted. **The migration is one-way** — rolling back to 2.2.1
+  afterwards shows an empty document list, so export a JSON backup first if you may need to
+  go back
+- Titles are no longer unique. Renaming a document to a name that already exists leaves two
+  documents instead of overwriting the other one's cards
+- Importing a JSON file always creates a new document; it no longer overwrites a saved
+  document that shares the imported title
+- Generated files live in `OUTPUT_DIR` (`/app/output` in the image, `./temp` in development).
+  `APP_ENV` is gone; the image and the compose file set `OUTPUT_DIR` instead
+- Cards with both sides empty survive a JSON import. Only an AI reply has its blank cards
+  dropped, which is where they come from
+
+### Fixed
+
+- The confirm dialog opened in the top-left corner of the screen instead of the middle.
+  Tailwind's preflight resets every element's margin, which removed the `margin: auto` a native
+  `<dialog>` relies on for centring
+- Deleting the document being edited no longer brings it back: it used to return on the next
+  reload and reappear in the list at the next save
+- The footer's GitHub link points at the real repository
+
+### Added
+
+- `CONTEXT.md` (domain language) and `docs/adr/0001-document-identity.md` (why a document is
+  identified by an id) for whoever touches storage next
+
 ## [2.2.1] - 2026-11-04
 
 ### Fixed
